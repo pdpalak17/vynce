@@ -1,0 +1,109 @@
+"""
+JamSync Schemas — Pydantic models for request/response validation.
+"""
+
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+# ── Auth Schemas ──────────────────────────────────────────────────────────────
+
+class UserRegister(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    email: str
+    avatar_url: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+# ── Room Schemas ──────────────────────────────────────────────────────────────
+
+class RoomCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    is_public: bool = True
+
+
+class RoomResponse(BaseModel):
+    id: str
+    name: str
+    code: str
+    creator_id: str
+    is_public: bool
+    is_active: bool
+    created_at: datetime
+    creator_username: Optional[str] = None
+    listener_count: int = 0
+    current_track: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ── Track Schemas ─────────────────────────────────────────────────────────────
+
+class TrackInfo(BaseModel):
+    id: str
+    title: str
+    artist: str
+    album: str = ""
+    album_art: str = ""
+    stream_url: str = ""
+    duration: int = 0  # seconds
+    source: str = "jamendo"  # "jamendo" or "deezer"
+
+
+class SearchResponse(BaseModel):
+    tracks: List[TrackInfo]
+    total: int = 0
+    source: str = "jamendo"
+
+
+# ── Playlist Schemas ──────────────────────────────────────────────────────────
+
+class PlaylistCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class PlaylistUpdate(BaseModel):
+    name: Optional[str] = None
+    tracks: Optional[List[dict]] = None
+
+
+class PlaylistResponse(BaseModel):
+    id: str
+    name: str
+    owner_id: str
+    tracks: str  # JSON string
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── WebSocket Message Schemas ─────────────────────────────────────────────────
+
+class WSMessage(BaseModel):
+    type: str
+    data: Optional[dict] = None
