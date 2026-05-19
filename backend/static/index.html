@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="JamSync — Listen to Bollywood music and jam with friends in real-time synced rooms. Free forever." />
+  <title>JamSync — Listen Together</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
+</head>
+<body>
+
+  <!-- ═══════════ GLOBAL LOADER ═══════════ -->
+  <div id="global-loader" class="global-loader">
+    <div class="loader-brand">🎵 JamSync</div>
+    <div class="loader"></div>
+  </div>
+
+  <!-- ═══════════ TOAST CONTAINER ═══════════ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ═══════════ 1. LANDING PAGE ═══════════ -->
+  <div id="landing-page" class="page landing-page">
+    <div class="orb-container">
+      <div class="orb orb--1"></div>
+      <div class="orb orb--2"></div>
+      <div class="orb orb--3"></div>
+    </div>
+
+    <nav class="landing-nav">
+      <div class="landing-nav__logo">🎵 <span>JamSync</span></div>
+      <div class="landing-nav__actions">
+        <button id="btn-nav-login" class="btn btn-ghost">Login</button>
+        <button id="btn-nav-signup" class="btn btn-primary">Sign Up Free</button>
+      </div>
+    </nav>
+
+    <section class="landing-hero">
+      <p class="landing-hero__tagline">✨ Free Bollywood Music Streaming</p>
+      <h1 class="landing-hero__title">Listen Together,<br/><span>Vibe Together</span></h1>
+      <p class="landing-hero__subtitle">Stream Bollywood hits, create rooms, and jam with friends in perfect sync. Arijit Singh, Pritam, AR Rahman — all free.</p>
+      <div class="landing-hero__actions">
+        <button id="btn-hero-create-room" class="btn btn-primary btn-lg">🎧 Create a Room</button>
+        <button id="btn-hero-explore" class="btn btn-ghost btn-lg">Explore Music →</button>
+      </div>
+    </section>
+
+    <section class="landing-features">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎵</div>
+          <h3>Bollywood & More</h3>
+          <p>Latest hits, 90s classics, Punjabi, Sufi — everything from JioSaavn's massive catalog.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>Synced Playback</h3>
+          <p>Everyone hears the same beat at the same time. WebSocket-powered real-time sync.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Live Chat</h3>
+          <p>Discuss tracks, share vibes, react in real-time while the music plays.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="landing-footer">
+      <p>© 2026 JamSync. Music powered by JioSaavn.</p>
+    </footer>
+  </div>
+
+  <!-- ═══════════ 2. AUTH MODAL ═══════════ -->
+  <div id="auth-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="auth-card">
+      <button id="btn-auth-close" class="modal-close-btn" aria-label="Close">✕</button>
+
+      <div class="auth-brand">🎵 JamSync</div>
+
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" data-tab="login" role="tab" aria-selected="true">Login</button>
+        <button class="auth-tab" data-tab="register" role="tab" aria-selected="false">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form-panel" class="auth-form-panel active">
+        <form id="login-form" class="auth-form" novalidate>
+          <div class="input-group">
+            <label for="login-email">📧 Username or Email</label>
+            <input type="text" id="login-email" name="email" placeholder="Username or you@example.com" autocomplete="username" required />
+          </div>
+          <div class="input-group">
+            <label for="login-password">🔑 Password</label>
+            <input type="password" id="login-password" name="password" placeholder="Enter your password" autocomplete="current-password" required />
+          </div>
+          <div class="remember-me-wrap">
+            <input type="checkbox" id="login-remember" checked />
+            <label for="login-remember">Remember me</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Log In</button>
+          <p class="auth-switch">Don't have an account? <button type="button" id="btn-switch-to-register" class="link-btn">Sign up</button></p>
+        </form>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-form-panel" class="auth-form-panel">
+        <form id="register-form" class="auth-form" novalidate>
+          <div class="input-group">
+            <label for="register-username">👤 Username</label>
+            <input type="text" id="register-username" name="username" placeholder="Choose a username" autocomplete="username" required />
+          </div>
+          <div class="input-group">
+            <label for="register-email">📧 Email</label>
+            <input type="email" id="register-email" name="email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="input-group">
+            <label for="register-password">🔑 Password</label>
+            <input type="password" id="register-password" name="password" placeholder="Min 6 characters" autocomplete="new-password" required />
+          </div>
+          <div class="remember-me-wrap">
+            <input type="checkbox" id="register-remember" checked />
+            <label for="register-remember">Remember me</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+          <p class="auth-switch">Already have an account? <button type="button" id="btn-switch-to-login" class="link-btn">Log in</button></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 3. DASHBOARD ═══════════ -->
+  <div id="dashboard-page" class="page dashboard" style="display:none;">
+
+    <!-- Dashboard Header -->
+    <header class="dash-header">
+      <div class="dash-header__left">
+        <span class="dash-logo">🎵 JamSync</span>
+      </div>
+      <div class="dash-header__center">
+        <div class="search-box">
+          <span class="search-box__icon">🔍</span>
+          <input type="text" id="search-music-input" class="search-box__input" placeholder="Search Bollywood songs, artists, albums..." autocomplete="off" />
+        </div>
+      </div>
+      <div class="dash-header__right">
+        <button id="btn-open-create-room" class="btn btn-primary btn-sm">+ Create Room</button>
+        <div class="user-menu">
+          <button id="btn-user-menu-toggle" class="user-avatar-btn" aria-expanded="false">
+            <div id="user-avatar" class="avatar-circle"></div>
+            <span id="user-display-name" class="user-name-text">User</span>
+          </button>
+          <div id="user-dropdown" class="dropdown-menu" style="display:none;">
+            <button id="btn-dropdown-profile" class="dropdown-item">👤 Profile</button>
+            <button id="btn-dropdown-logout" class="dropdown-item">🚪 Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <main class="dash-content">
+
+      <!-- Search Results (hidden initially) -->
+      <section id="search-results-section" class="dash-section" style="display:none;">
+        <h2 class="section-title">🔍 Search Results</h2>
+        <div id="search-results" class="tracks-grid"></div>
+      </section>
+
+      <!-- Trending -->
+      <section class="dash-section">
+        <h2 class="section-title">🔥 Trending Bollywood</h2>
+        <div id="trending-tracks" class="tracks-grid">
+          <div class="track-skeleton"></div>
+          <div class="track-skeleton"></div>
+          <div class="track-skeleton"></div>
+          <div class="track-skeleton"></div>
+        </div>
+      </section>
+
+      <!-- Quick Genres -->
+      <section class="dash-section">
+        <h2 class="section-title">🎭 Browse by Mood</h2>
+        <div class="genre-chips">
+          <button class="genre-chip" data-genre="romantic bollywood">❤️ Romantic</button>
+          <button class="genre-chip" data-genre="sad bollywood songs">😢 Sad</button>
+          <button class="genre-chip" data-genre="party bollywood">🎉 Party</button>
+          <button class="genre-chip" data-genre="90s bollywood hits">🕺 90s Hits</button>
+          <button class="genre-chip" data-genre="arijit singh hits">🎤 Arijit Singh</button>
+          <button class="genre-chip" data-genre="ar rahman best">🎹 AR Rahman</button>
+          <button class="genre-chip" data-genre="punjabi latest">🎶 Punjabi</button>
+          <button class="genre-chip" data-genre="sufi songs">🌙 Sufi</button>
+          <button class="genre-chip" data-genre="lo-fi bollywood">🌊 Lo-fi</button>
+          <button class="genre-chip" data-genre="old hindi songs classic">📻 Retro</button>
+        </div>
+      </section>
+
+      <!-- Genre Results -->
+      <section id="genre-results-section" class="dash-section" style="display:none;">
+        <h2 id="genre-results-title" class="section-title">Genre</h2>
+        <div id="genre-results" class="tracks-grid"></div>
+      </section>
+
+      <!-- Public Rooms -->
+      <section class="dash-section">
+        <h2 class="section-title">🏠 Public Rooms</h2>
+        <div id="public-rooms-grid" class="rooms-grid">
+          <p class="empty-hint">No rooms yet — create one to get started!</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Create Room Modal -->
+    <div id="create-room-modal" class="modal-overlay" style="display:none;">
+      <div class="mini-modal">
+        <h3>Create a Room</h3>
+        <form id="create-room-form">
+          <div class="input-group">
+            <label for="room-name-input">Room Name</label>
+            <input type="text" id="room-name-input" placeholder="e.g. Late Night Bollywood" required />
+          </div>
+          <div class="toggle-row">
+            <label for="room-visibility-toggle">Public Room</label>
+            <input type="checkbox" id="room-visibility-toggle" checked />
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="btn-create-room-close" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 4. ROOM PAGE ═══════════ -->
+  <div id="room-page" class="page room-view" style="display:none;">
+
+    <!-- Room Header -->
+    <header class="room-header">
+      <div class="room-header__left">
+        <button id="btn-leave-room" class="btn btn-ghost btn-sm">← Leave</button>
+        <h2 id="room-name-display" class="room-title">Room</h2>
+      </div>
+      <div class="room-header__right">
+        <span class="listener-badge">
+          👥 <span id="listener-count-display">0</span> listening
+        </span>
+        <button id="btn-copy-invite" class="btn btn-ghost btn-sm" title="Copy invite code">
+          📋 <span id="invite-code-display">CODE</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="room-body">
+      <!-- Left: Player + Search + Queue -->
+      <div class="room-main">
+
+
+
+        <!-- Room Search -->
+        <div class="room-search-wrap">
+          <input type="text" id="room-search-input" class="search-box__input" placeholder="🔍 Search songs to play..." />
+          <div id="room-search-results" class="room-search-results"></div>
+        </div>
+
+        <!-- Queue -->
+        <div class="queue-section">
+          <h4 class="queue-title">📋 Up Next</h4>
+          <div id="queue-list" class="queue-list">
+            <p class="empty-hint">Queue is empty — search and add songs</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Listeners + Chat -->
+      <div class="room-sidebar">
+        <div class="listeners-section">
+          <h4>👥 Listeners</h4>
+          <div id="listeners-list" class="listeners-list"></div>
+        </div>
+
+        <div class="chat-section">
+          <h4>💬 Chat</h4>
+          <div id="chat-messages" class="chat-messages"></div>
+          <form id="chat-form" class="chat-input-wrap">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." autocomplete="off" />
+            <button type="submit" class="btn btn-primary btn-sm">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 5. PROFILE PAGE ═══════════ -->
+  <div id="profile-page" class="page" style="display:none;">
+    <header class="dash-header">
+      <button id="btn-profile-back" class="btn btn-ghost btn-sm">← Dashboard</button>
+      <span class="dash-logo">🎵 JamSync</span>
+      <div></div>
+    </header>
+    <main class="dash-content">
+      <div class="profile-card">
+        <div id="profile-avatar" class="avatar-circle avatar-circle--lg"></div>
+        <h2 id="profile-username">Username</h2>
+        <p id="profile-email" class="text-muted">email@example.com</p>
+      </div>
+      <section class="dash-section">
+        <h2 class="section-title">📂 My Playlists</h2>
+        <button id="btn-create-playlist" class="btn btn-ghost btn-sm">+ New Playlist</button>
+        <div id="playlists-list" class="playlists-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══════════ 6. GLOBAL PLAY BAR ═══════════ -->
+  <div id="global-player-bar" class="global-play-bar" style="display:none;">
+    <div class="player-left">
+      <div class="player-art-wrap">
+        <img id="player-album-art" class="player-art" src="" alt="Album Art" />
+        <div id="player-placeholder-icon" class="player-art-placeholder">🎵</div>
+      </div>
+      <div class="player-info">
+        <h3 id="player-track-title" class="player-title">No track playing</h3>
+        <p id="player-track-artist" class="player-artist">Choose a track</p>
+      </div>
+    </div>
+    
+    <div class="player-center">
+      <div class="player-controls">
+        <button id="btn-prev" class="ctrl-btn ctrl-btn--sm" title="Previous">⏮</button>
+        <button id="btn-play-pause" class="ctrl-btn ctrl-btn--play" title="Play">
+          <span class="icon-play">▶</span>
+          <span class="icon-pause" style="display:none">⏸</span>
+        </button>
+        <button id="btn-next" class="ctrl-btn ctrl-btn--sm" title="Next">⏭</button>
+      </div>
+      <div class="player-progress">
+        <span id="time-current" class="player-time">0:00</span>
+        <div id="progress-bar" class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+          <div id="progress-thumb" class="progress-thumb"></div>
+        </div>
+        <span id="time-total" class="player-time">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <div class="volume-wrap">
+        <button id="btn-volume-toggle" class="ctrl-btn ctrl-btn--sm" title="Volume">
+          <span class="icon-volume-on">🔊</span>
+          <span class="icon-volume-off" style="display:none">🔇</span>
+        </button>
+        <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="70" />
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

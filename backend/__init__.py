@@ -1,0 +1,3 @@
+"""
+JamSync — Package init.
+"""
