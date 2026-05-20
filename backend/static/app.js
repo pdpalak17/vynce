@@ -203,6 +203,7 @@ async function api(method, path, body) {
 api.get = p => api('GET', p);
 api.post = (p, b) => api('POST', p, b);
 api.put = (p, b) => api('PUT', p, b);
+api.delete = p => api('DELETE', p);
 
 /* ═══════ TOAST ═══════ */
 function showToast(message, type = 'info') {
@@ -424,7 +425,7 @@ function connectToRoom(code) {
   if (state.ws?.readyState <= WebSocket.OPEN) state.ws.close();
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/${code}?token=${encodeURIComponent(state.token)}`);
-  ws.onopen = () => { wsRetries = 0; startHeartbeat(); showToast('Connected!', 'success'); };
+  ws.onopen = () => { wsRetries = 0; startHeartbeat(); };
   ws.onmessage = e => { try { handleWSMessage(JSON.parse(e.data)); } catch(err) { console.error('[WS]', err); } };
   ws.onclose = () => { stopHeartbeat(); if (state.currentRoom?.code === code) attemptReconnect(code); };
   ws.onerror = err => console.error('[WS] Error', err);
@@ -504,7 +505,6 @@ function setVolume(v) { state.volume = Math.max(0,Math.min(1,v)); audio.volume =
 async function playNext() {
   if(!state.queue.length) {
     if (state.currentTrack) {
-      showToast('Autoplay: Finding next similar song...', 'info');
       try {
         const res = await api.get(`/api/music/song/${state.currentTrack.id}/similar?limit=15`);
         if (res && res.tracks && res.tracks.length) {
