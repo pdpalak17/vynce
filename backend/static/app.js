@@ -437,7 +437,7 @@ function handleWSMessage(msg) {
     case 'room_state':
       if (d.current_track) loadTrack(d.current_track, d.position || 0);
       if (d.is_playing) { audio.play().catch(()=>{}); state.isPlaying = true; }
-      if (d.queue) { state.queue = d.queue; renderQueue(); }
+      if (d.queue) { state.queue = d.queue; renderQueue(); renderExpandedQueue(); }
       if (d.users) renderListeners(d.users);
       updatePlaybackUI(); break;
     case 'user_joined': showToast(`${escapeHtml(d.username)} joined`, 'info'); updateLC(d.listener_count); break;
@@ -447,7 +447,7 @@ function handleWSMessage(msg) {
     case 'pause': audio.pause(); state.isPlaying = false; updatePlaybackUI(); break;
     case 'resume': audio.play().catch(()=>{}); state.isPlaying = true; updatePlaybackUI(); break;
     case 'seek': audio.currentTime = d.position; break;
-    case 'queue_update': state.queue = d.queue || []; renderQueue(); break;
+    case 'queue_update': state.queue = d.queue || []; renderQueue(); renderExpandedQueue(); break;
     case 'chat_message': appendChatMessage(d); break;
     case 'error': showToast(d.message || 'Error', 'error'); break;
     case 'pong': break;
@@ -614,14 +614,31 @@ function updateVolumeUI() {
 
 function renderQueue() {
   const c = $('#queue-list'); if(!c) return;
-  if(!state.queue.length) { c.innerHTML = '<p class="empty-hint">Queue is empty</p>'; return; }
   c.innerHTML = '';
+  if(!state.queue.length) { c.innerHTML = '<p class="empty-hint">Queue is empty</p>'; return; }
   state.queue.forEach((t,i) => {
     const d = document.createElement('div'); d.className = 'queue-item';
+    d.style.cursor = 'pointer';
     d.innerHTML = `
       <img class="queue-item-art" src="${escapeHtml(t.album_art||'')}" alt="" onerror="this.style.display='none'" />
       <div class="queue-item-info"><span class="queue-item-title">${escapeHtml(t.title)}</span><span class="queue-item-artist">${escapeHtml(t.artist)}</span></div>
-      <span style="font-size:12px;color:var(--text-3)">${formatTime(t.duration)}</span>`;
+      <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
+      <button class="remove-queue-btn" title="Remove from Queue">&times;</button>`;
+    d.querySelector('.remove-queue-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      removeFromQueue(i);
+    });
+    d.addEventListener('click', () => {
+      if (state.currentRoom) {
+        sendWS('remove_from_queue', { index: i });
+        sendWS('play_track', { track: t });
+      } else {
+        const chosen = state.queue.splice(i, 1)[0];
+        playTrack(chosen);
+        renderQueue();
+        renderExpandedQueue();
+      }
+    });
     c.appendChild(d);
   });
 }
@@ -801,6 +818,19 @@ function addToQueue(track) {
   state.queue.push(track); renderQueue();
   if(state.currentRoom) sendWS('queue_update', {queue:state.queue});
   showToast(`Added "${track.title}" to queue`, 'success');
+}
+
+function removeFromQueue(index) {
+  if (state.currentRoom) {
+    sendWS('remove_from_queue', { index: index });
+  } else {
+    if (index >= 0 && index < state.queue.length) {
+      const removed = state.queue.splice(index, 1)[0];
+      renderQueue();
+      renderExpandedQueue();
+      showToast(`Removed "${removed.title}" from queue`, 'info');
+    }
+  }
 }
 
 /* ═══════ CHAT ═══════ */
@@ -1458,13 +1488,23 @@ function renderExpandedQueue() {
         <span class="queue-item-title">${escapeHtml(t.title)}</span>
         <span class="queue-item-artist">${escapeHtml(t.artist)}</span>
       </div>
-      <span style="font-size:12px;color:var(--text-3)">${formatTime(t.duration)}</span>
+      <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
+      <button class="remove-queue-btn" title="Remove from Queue">&times;</button>
     `;
+    d.querySelector('.remove-queue-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      removeFromQueue(i);
+    });
     d.addEventListener('click', () => {
-      const chosen = state.queue.splice(i, 1)[0];
-      playTrack(chosen);
-      renderQueue();
-      renderExpandedQueue();
+      if (state.currentRoom) {
+        sendWS('remove_from_queue', { index: i });
+        sendWS('play_track', { track: t });
+      } else {
+        const chosen = state.queue.splice(i, 1)[0];
+        playTrack(chosen);
+        renderQueue();
+        renderExpandedQueue();
+      }
     });
     c.appendChild(d);
   });
