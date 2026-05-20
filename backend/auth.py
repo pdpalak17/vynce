@@ -1,5 +1,5 @@
 """
-JamSync Auth — JWT token creation/verification and password hashing.
+Vynce Auth — JWT token creation/verification and password hashing.
 """
 
 from datetime import datetime, timedelta

@@ -1,3 +1,3 @@
 """
-JamSync Services — Package init.
+Vynce Services — Package init.
 """

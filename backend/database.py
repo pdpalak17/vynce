@@ -1,5 +1,5 @@
 """
-JamSync Database — SQLAlchemy async engine and session setup.
+Vynce Database — SQLAlchemy async engine and session setup.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

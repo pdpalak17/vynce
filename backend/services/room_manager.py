@@ -1,5 +1,5 @@
 """
-JamSync Room Manager — WebSocket-based synchronized music room management.
+Vynce Room Manager — WebSocket-based synchronized music room management.
 
 Handles room state, user connections, playback sync, chat, and queue management.
 The server is the authoritative source for playback position.

@@ -1,5 +1,5 @@
 """
-JamSync Models — SQLAlchemy ORM models for User, Room, Playlist, RoomHistory.
+Vynce Models — SQLAlchemy ORM models for User, Room, Playlist, RoomHistory.
 """
 
 import datetime

@@ -1,3 +1,3 @@
 """
-JamSync — Package init.
+Vynce — Package init.
 """

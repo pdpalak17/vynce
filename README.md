@@ -1,10 +1,10 @@
-# 🎵 JamSync — Listen Together, Vibe Together
+# 🎵 Vynce — Listen Together, Vibe Together
 
-JamSync is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
+Vynce is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
 
-Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page application (SPA) frontend, JamSync brings high-fidelity music streaming, smart recommendations, voice search, and personal playlist management directly to your browser.
+Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page application (SPA) frontend, Vynce brings high-fidelity music streaming, smart recommendations, voice search, and personal playlist management directly to your browser.
 
-![JamSync](https://img.shields.io/badge/JamSync-v2.0.0-00E5FF?style=for-the-badge)
+![Vynce](https://img.shields.io/badge/Vynce-v2.0.0-00E5FF?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10+-00D4FF?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-00FF88?style=for-the-badge&logo=fastapi&logoColor=white)
 ![WebSockets](https://img.shields.io/badge/WebSockets-Real--Time-FF007F?style=for-the-badge&logo=socket.io&logoColor=white)
@@ -50,7 +50,7 @@ Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page ap
 ## 🏗️ Architecture
 
 ```
-jamsync/
+vynce/
 ├── backend/
 │   ├── main.py              # FastAPI app setup, static mounting, and WS server
 │   ├── config.py            # Environment configuration
@@ -114,7 +114,7 @@ Launch the FastAPI server using `uvicorn`:
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 5. Access JamSync
+### 5. Access Vynce
 Open [http://localhost:8000](http://localhost:8000) in your web browser. 🎉
 
 ---
@@ -133,6 +133,6 @@ Open [http://localhost:8000](http://localhost:8000) in your web browser. 🎉
 ---
 
 ## 📄 License
-JamSync is licensed under the [MIT License](file:///C:/Users/palak/.gemini/antigravity/scratch/jamsync/LICENSE). 
+Vynce is licensed under the [MIT License](file:///C:/Users/palak/.gemini/antigravity/scratch/vynce/LICENSE). 
 
 *Note: Streamed music is powered by external public catalogs. Please check the licensing guidelines of individual music providers for commercial usage.*

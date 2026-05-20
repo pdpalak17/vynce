@@ -1,5 +1,5 @@
 """
-JamSync Room Routes — CRUD for music rooms.
+Vynce Room Routes — CRUD for music rooms.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status

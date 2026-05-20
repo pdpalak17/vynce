@@ -1,5 +1,5 @@
 """
-JamSync Deezer Service — Async client for the Deezer public API.
+Vynce Deezer Service — Async client for the Deezer public API.
 Provides 30-second previews for mainstream music discovery.
 """
 

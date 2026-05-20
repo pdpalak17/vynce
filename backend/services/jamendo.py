@@ -1,5 +1,5 @@
 """
-JamSync Jamendo Service — Async client for the Jamendo API v3.0.
+Vynce Jamendo Service — Async client for the Jamendo API v3.0.
 Provides free, full-length Creative Commons licensed music streaming.
 """
 
