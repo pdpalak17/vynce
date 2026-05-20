@@ -18,6 +18,7 @@ from ..schemas import (
     HomeSectionResponse
 )
 from ..services import jiosaavn, jamendo
+from ..services.recommender import recommend_tracks
 
 router = APIRouter(prefix="/api/music", tags=["music"])
 
@@ -111,7 +112,10 @@ async def get_by_genre(
 
 
 @router.get("/home", response_model=list[HomeSectionResponse])
-async def get_home_page(user: User = Depends(get_current_user)):
+async def get_home_page(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Fetch homepage categories (Trending, Romantic, Sad, Party, For You)."""
     tasks = [
         jiosaavn.get_trending(limit=12),
@@ -139,8 +143,38 @@ async def get_home_page(user: User = Depends(get_current_user)):
             seen_ids.add(t["id"])
             unique_tracks.append(t)
     
-    random.shuffle(unique_tracks)
-    for_you = unique_tracks[:12]
+    # Retrieve user's listening history & liked/disliked songs to train the recommender neural network
+    try:
+        history_result = await db.execute(
+            select(UserHistory).where(UserHistory.user_id == user.id).order_by(desc(UserHistory.played_at)).limit(50)
+        )
+        history_songs = history_result.scalars().all()
+        history_list = [{"track_id": s.track_id, "track_title": s.track_title, "track_artist": s.track_artist} for s in history_songs]
+        
+        liked_result = await db.execute(
+            select(LikedSong).where(LikedSong.user_id == user.id)
+        )
+        liked_songs = liked_result.scalars().all()
+        liked_list = [{"track_id": s.track_id, "track_title": s.track_title, "track_artist": s.track_artist} for s in liked_songs]
+        
+        disliked_result = await db.execute(
+            select(DislikedSong).where(DislikedSong.user_id == user.id)
+        )
+        disliked_ids = {s.track_id for s in disliked_result.scalars().all()}
+    except Exception as e:
+        print(f"[Recommender-DB] Error querying user history: {e}")
+        history_list = []
+        liked_list = []
+        disliked_ids = set()
+
+    # Get personalized For You tracks using the neural network
+    for_you = recommend_tracks(
+        history_tracks=history_list,
+        liked_tracks=liked_list,
+        disliked_ids=disliked_ids,
+        candidate_tracks=unique_tracks,
+        limit=12
+    )
     
     def shuffle_list(lst):
         l = list(lst)

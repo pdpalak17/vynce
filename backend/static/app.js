@@ -857,12 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 400);
 
-  // Close search action
-  $('#btn-close-search')?.addEventListener('click', () => {
-    $('#search-results-section').style.display = 'none';
-    if (searchInput) searchInput.value = '';
-    switchSubpage(state.currentSubpage || 'home');
-  });
+
 
   if(searchInput) {
     searchInput.addEventListener('input', e => {
@@ -1438,6 +1433,15 @@ function switchSubpage(page) {
 }
 
 function navigateSubpage(direction) {
+  const searchResultsSec = $('#search-results-section');
+  const isSearchActive = searchResultsSec && searchResultsSec.style.display !== 'none';
+  
+  if (isSearchActive) {
+    searchResultsSec.style.display = 'none';
+    const searchInput = $('#search-music-input');
+    if (searchInput) searchInput.value = '';
+  }
+  
   const currentIndex = subpages.indexOf(state.currentSubpage || 'home');
   let nextIndex = currentIndex + direction;
   if (nextIndex < 0) nextIndex = subpages.length - 1;
