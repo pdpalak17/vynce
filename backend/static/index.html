@@ -184,53 +184,113 @@
 
       <!-- Search Results (hidden initially) -->
       <section id="search-results-section" class="dash-section" style="display:none;">
-        <h2 class="section-title">🔍 Search Results</h2>
+        <div class="section-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 class="section-title" style="margin-bottom:0;">🔍 Search Results</h2>
+          <button id="btn-close-search" class="btn btn-ghost btn-sm" style="font-size:12px;">✕ Close Search</button>
+        </div>
         <div id="search-results" class="tracks-grid"></div>
       </section>
 
-      <!-- Dynamic Home Sections -->
-      <div id="dynamic-home-sections">
+      <!-- Dashboard sub-navigation / page switcher -->
+      <div class="sub-nav-bar">
+        <div class="sub-nav-arrows">
+          <button id="btn-sub-nav-prev" class="sub-nav-arrow-btn" title="Previous Page">←</button>
+          <button id="btn-sub-nav-next" class="sub-nav-arrow-btn" title="Next Page">→</button>
+        </div>
+        <div class="sub-nav-links">
+          <button class="sub-nav-btn active" data-subpage="home">🏠 Home</button>
+          <button class="sub-nav-btn" data-subpage="trending">🔥 Trending</button>
+          <button class="sub-nav-btn" data-subpage="romantic">❤️ Romantic</button>
+          <button class="sub-nav-btn" data-subpage="sad">😢 Sad</button>
+          <button class="sub-nav-btn" data-subpage="party">🎉 Party</button>
+          <button class="sub-nav-btn" data-subpage="rooms">👥 Public Rooms</button>
+        </div>
+      </div>
+
+      <!-- 1. HOME SUBPAGE -->
+      <div id="subpage-home" class="subpage-container active">
+        <!-- Recently Played -->
+        <div id="section-recently-played"></div>
+
+        <!-- For You Mix -->
+        <div id="section-for-you">
+          <section class="dash-section">
+            <h2 class="section-title">✨ For You Mix</h2>
+            <div class="tracks-grid">
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Quick Genres -->
         <section class="dash-section">
-          <h2 class="section-title">🔥 Trending Hits</h2>
-          <div class="tracks-grid">
-            <div class="track-skeleton"></div>
-            <div class="track-skeleton"></div>
-            <div class="track-skeleton"></div>
-            <div class="track-skeleton"></div>
+          <h2 class="section-title">🎭 Browse by Mood</h2>
+          <div class="genre-chips">
+            <button class="genre-chip" data-genre="romantic bollywood">❤️ Romantic</button>
+            <button class="genre-chip" data-genre="sad bollywood songs">😢 Sad</button>
+            <button class="genre-chip" data-genre="party bollywood">🎉 Party</button>
+            <button class="genre-chip" data-genre="90s bollywood hits">🕺 90s Hits</button>
+            <button class="genre-chip" data-genre="arijit singh hits">🎤 Arijit Singh</button>
+            <button class="genre-chip" data-genre="ar rahman best">🎹 AR Rahman</button>
+            <button class="genre-chip" data-genre="punjabi latest">🎶 Punjabi</button>
+            <button class="genre-chip" data-genre="sufi songs">🌙 Sufi</button>
+            <button class="genre-chip" data-genre="lo-fi bollywood">🌊 Lo-fi</button>
+            <button class="genre-chip" data-genre="old hindi songs classic">📻 Retro</button>
           </div>
+        </section>
+
+        <!-- Genre Results -->
+        <section id="genre-results-section" class="dash-section" style="display:none;">
+          <div class="section-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 id="genre-results-title" class="section-title" style="margin-bottom:0;">Genre</h2>
+            <button id="btn-close-genre" class="btn btn-ghost btn-sm" style="font-size:12px;">✕ Close</button>
+          </div>
+          <div id="genre-results" class="tracks-grid"></div>
         </section>
       </div>
 
-      <!-- Quick Genres -->
-      <section class="dash-section">
-        <h2 class="section-title">🎭 Browse by Mood</h2>
-        <div class="genre-chips">
-          <button class="genre-chip" data-genre="romantic bollywood">❤️ Romantic</button>
-          <button class="genre-chip" data-genre="sad bollywood songs">😢 Sad</button>
-          <button class="genre-chip" data-genre="party bollywood">🎉 Party</button>
-          <button class="genre-chip" data-genre="90s bollywood hits">🕺 90s Hits</button>
-          <button class="genre-chip" data-genre="arijit singh hits">🎤 Arijit Singh</button>
-          <button class="genre-chip" data-genre="ar rahman best">🎹 AR Rahman</button>
-          <button class="genre-chip" data-genre="punjabi latest">🎶 Punjabi</button>
-          <button class="genre-chip" data-genre="sufi songs">🌙 Sufi</button>
-          <button class="genre-chip" data-genre="lo-fi bollywood">🌊 Lo-fi</button>
-          <button class="genre-chip" data-genre="old hindi songs classic">📻 Retro</button>
+      <!-- 2. TRENDING SUBPAGE -->
+      <div id="subpage-trending" class="subpage-container" style="display:none;">
+        <div id="section-trending">
+          <section class="dash-section">
+            <h2 class="section-title">🔥 Trending Hits</h2>
+            <div class="tracks-grid">
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+              <div class="track-skeleton"></div>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
 
-      <!-- Genre Results -->
-      <section id="genre-results-section" class="dash-section" style="display:none;">
-        <h2 id="genre-results-title" class="section-title">Genre</h2>
-        <div id="genre-results" class="tracks-grid"></div>
-      </section>
+      <!-- 3. ROMANTIC SUBPAGE -->
+      <div id="subpage-romantic" class="subpage-container" style="display:none;">
+        <div id="section-romantic"></div>
+      </div>
 
-      <!-- Public Rooms -->
-      <section class="dash-section">
-        <h2 class="section-title">🏠 Public Rooms</h2>
-        <div id="public-rooms-grid" class="rooms-grid">
-          <p class="empty-hint">No rooms yet — create one to get started!</p>
-        </div>
-      </section>
+      <!-- 4. SAD SUBPAGE -->
+      <div id="subpage-sad" class="subpage-container" style="display:none;">
+        <div id="section-sad"></div>
+      </div>
+
+      <!-- 5. PARTY SUBPAGE -->
+      <div id="subpage-party" class="subpage-container" style="display:none;">
+        <div id="section-party"></div>
+      </div>
+
+      <!-- 6. ROOMS SUBPAGE -->
+      <div id="subpage-rooms" class="subpage-container" style="display:none;">
+        <section class="dash-section">
+          <h2 class="section-title">🏠 Public Rooms</h2>
+          <div id="public-rooms-grid" class="rooms-grid">
+            <p class="empty-hint">No rooms yet — create one to get started!</p>
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- Create Room Modal -->

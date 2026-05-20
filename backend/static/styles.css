@@ -1205,6 +1205,76 @@ body.has-playbar {
   color: #ff5252;
   background: rgba(255, 82, 82, 0.15);
 }
+/* Sub Navigation Page Switcher */
+.sub-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.sub-nav-arrows {
+  display: flex;
+  gap: 8px;
+}
+.sub-nav-arrow-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.sub-nav-arrow-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  color: #fff;
+  transform: scale(1.05);
+}
+.sub-nav-links {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+}
+.sub-nav-links::-webkit-scrollbar {
+  display: none;
+}
+.sub-nav-btn {
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+.sub-nav-btn:hover {
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.03);
+}
+.sub-nav-btn.active {
+  background: var(--bg-card);
+  border-color: rgba(123, 47, 255, 0.3);
+  color: var(--accent2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 
-
-
+.subpage-container {
+  animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
