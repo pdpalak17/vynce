@@ -134,7 +134,7 @@ body {
   color:var(--text-3); cursor:pointer; font-size:14px; transition:all .2s;
 }
 .modal-close-btn:hover { background:rgba(255,45,120,0.15); color:var(--accent3); }
-.auth-brand { text-align:center; font-size:22px; font-weight:700; margin-bottom:20px; }
+.auth-brand { display: flex; align-items: center; justify-content: center; gap: 8px; font-size:22px; font-weight:700; margin-bottom:20px; }
 
 .auth-tabs {
   display:flex; border-radius:var(--radius-sm); background:rgba(255,255,255,0.04);
@@ -185,7 +185,7 @@ body {
   position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between;
   padding:16px 32px; max-width:1200px; margin:0 auto;
 }
-.landing-nav__logo { font-size:22px; font-weight:700; }
+.landing-nav__logo { font-size:22px; font-weight:700; display: flex; align-items: center; gap: 8px; }
 .landing-nav__logo span { background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .landing-nav__actions { display:flex; gap:10px; }
 
@@ -1085,5 +1085,27 @@ body.has-playbar {
   .expanded-tab-btn {
     font-size: 0.95rem;
   }
+}
+
+/* Brand logos styles */
+.loader-logo {
+  height: 96px;
+  width: 96px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+.brand-logo-img {
+  height: 36px;
+  width: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+}
+@keyframes pulse-glow {
+  0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.7)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
 }
 
