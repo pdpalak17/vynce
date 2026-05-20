@@ -588,6 +588,91 @@ async function searchMusic(query) {
   return data.tracks || [];
 }
 
+// Search History Management
+function saveSearchToHistory(query) {
+  if (!query || !query.trim() || query.trim().length < 2) return;
+  const q = query.trim();
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]');
+  } catch (e) {
+    history = [];
+  }
+  
+  // Filter out the search query if it already exists, and insert at front
+  history = history.filter(item => item.toLowerCase() !== q.toLowerCase());
+  history.unshift(q);
+  if (history.length > 5) history = history.slice(0, 5);
+  
+  localStorage.setItem('vynce_recent_searches', JSON.stringify(history));
+  renderSearchHistory();
+}
+
+function renderSearchHistory() {
+  const dropdown = $('#search-history-dropdown');
+  const listEl = $('#search-history-list');
+  if (!dropdown || !listEl) return;
+  
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]');
+  } catch (e) {
+    history = [];
+  }
+  
+  if (!history.length) {
+    dropdown.style.display = 'none';
+    return;
+  }
+  
+  listEl.innerHTML = '';
+  history.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'search-history-item';
+    row.innerHTML = `
+      <span class="search-history-item-text">🕒 ${escapeHtml(item)}</span>
+      <button class="remove-history-item-btn" title="Remove">&times;</button>
+    `;
+    
+    // Clicking on text triggers a search
+    row.querySelector('.search-history-item-text').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const input = $('#search-music-input');
+      if (input) {
+        input.value = item;
+        
+        // Trigger dashboard search
+        const resultsSec = $('#search-results-section');
+        const resultsGrid = $('#search-results');
+        if (resultsSec && resultsGrid) {
+          resultsSec.style.display = '';
+          resultsGrid.innerHTML = '<div class="track-skeleton"></div><div class="track-skeleton"></div>';
+          searchMusic(item).then(tracks => {
+            if (tracks) renderTrackCards(tracks, '#search-results');
+          });
+        }
+        
+        // Trigger saving it back to top of history
+        saveSearchToHistory(item);
+      }
+      dropdown.style.display = 'none';
+    });
+    
+    // Clicking on removal button removes the item from history
+    row.querySelector('.remove-history-item-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      let hist = [];
+      try { hist = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]'); } catch(_) {}
+      hist = hist.filter(x => x !== item);
+      localStorage.setItem('vynce_recent_searches', JSON.stringify(hist));
+      renderSearchHistory();
+    });
+    
+    listEl.appendChild(row);
+  });
+}
+
+
 async function loadTrending() {
   const data = await api.get('/api/music/trending?limit=20');
   if(!data) return;
@@ -732,18 +817,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dashboard search
   const searchInput = $('#search-music-input');
+  const searchHistoryDropdown = $('#search-history-dropdown');
   const debouncedDashSearch = debounce(async q => {
     if(q.length < 2) { $('#search-results-section').style.display = 'none'; return; }
     const tracks = await searchMusic(q);
     if(tracks && tracks.length) {
       $('#search-results-section').style.display = '';
       renderTrackCards(tracks, '#search-results');
+      saveSearchToHistory(q);
     }
   }, 400);
   if(searchInput) {
-    searchInput.addEventListener('input', e => debouncedDashSearch(e.target.value));
-    searchInput.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); debouncedDashSearch(searchInput.value); } });
+    searchInput.addEventListener('input', e => {
+      const val = e.target.value;
+      if (!val.trim()) {
+        renderSearchHistory();
+        const history = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]');
+        if (history.length > 0 && searchHistoryDropdown) {
+          searchHistoryDropdown.style.display = 'block';
+        }
+      } else {
+        if (searchHistoryDropdown) searchHistoryDropdown.style.display = 'none';
+        debouncedDashSearch(val);
+      }
+    });
+    searchInput.addEventListener('focus', () => {
+      if (!searchInput.value.trim()) {
+        renderSearchHistory();
+        const history = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]');
+        if (history.length > 0 && searchHistoryDropdown) {
+          searchHistoryDropdown.style.display = 'block';
+        }
+      }
+    });
+    searchInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!searchInput.value.trim()) {
+        renderSearchHistory();
+        const history = JSON.parse(localStorage.getItem('vynce_recent_searches') || '[]');
+        if (history.length > 0 && searchHistoryDropdown) {
+          searchHistoryDropdown.style.display = 'block';
+        }
+      }
+    });
+    searchInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter') {
+        e.preventDefault();
+        debouncedDashSearch(searchInput.value);
+        if (searchHistoryDropdown) searchHistoryDropdown.style.display = 'none';
+      }
+    });
   }
+
+  // Clear search history
+  $('#btn-clear-search-history')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    localStorage.removeItem('vynce_recent_searches');
+    if (searchHistoryDropdown) searchHistoryDropdown.style.display = 'none';
+  });
+
+  // Close search history dropdown on click outside
+  document.addEventListener('click', (e) => {
+    const searchBox = $('.search-box');
+    if (searchBox && !searchBox.contains(e.target)) {
+      if (searchHistoryDropdown) searchHistoryDropdown.style.display = 'none';
+    }
+  });
 
   // Genre chips
   $$('.genre-chip').forEach(chip => {
@@ -1229,10 +1368,56 @@ async function loadHomeSections() {
   if (!container) return;
   container.innerHTML = '<p class="empty-hint" style="padding: 20px;">Shuffling music & loading homepage...</p>';
   
-  const data = await api.get('/api/music/home');
+  // Fetch history and homepage categories concurrently
+  const [historyData, data] = await Promise.all([
+    api.get('/api/music/history?limit=24').catch(() => []),
+    api.get('/api/music/home')
+  ]);
+  
   if (!data) return;
   
   container.innerHTML = '';
+
+  // Prepend Recently Played if user has history
+  if (historyData && historyData.length) {
+    const seenIds = new Set();
+    const recentTracks = [];
+    historyData.forEach(item => {
+      if (!seenIds.has(item.track_id)) {
+        seenIds.add(item.track_id);
+        recentTracks.push({
+          id: item.track_id,
+          title: item.track_title,
+          artist: item.track_artist,
+          album: item.track_album,
+          album_art: item.track_album_art,
+          stream_url: item.track_stream_url,
+          source: 'jiosaavn'
+        });
+      }
+    });
+
+    if (recentTracks.length > 0) {
+      // Limit to max 12 items for clean layout
+      const displayTracks = recentTracks.slice(0, 12);
+      
+      const secEl = document.createElement('section');
+      secEl.className = 'dash-section';
+      
+      const titleEl = document.createElement('h2');
+      titleEl.className = 'section-title';
+      titleEl.textContent = '🕒 Recently Played';
+      secEl.appendChild(titleEl);
+      
+      const gridEl = document.createElement('div');
+      gridEl.className = 'tracks-grid';
+      secEl.appendChild(gridEl);
+      
+      container.appendChild(secEl);
+      renderTracksInGrid(displayTracks, gridEl);
+    }
+  }
+  
   data.forEach(section => {
     const secEl = document.createElement('section');
     secEl.className = 'dash-section';
