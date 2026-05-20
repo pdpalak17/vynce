@@ -18,13 +18,125 @@ const state = {
   likedSongs: new Set(),
 };
 
-/* ═══════ AUDIO ═══════ */
+/* ═══════ AUDIO & HIGH-FIDELITY PROCESSING ═══════ */
 const audio = new Audio();
 audio.crossOrigin = 'anonymous';
 audio.preload = 'auto';
 const savedVol = localStorage.getItem('vynce_volume');
 if (savedVol !== null) state.volume = parseFloat(savedVol);
 audio.volume = state.volume;
+
+// Web Audio API Pipeline for Hi-Fi Enhancement
+let audioCtx = null;
+let sourceNode = null;
+let filterBass = null;
+let filterMid = null;
+let filterTreble = null;
+let compressor = null;
+let isAudioPipelineInitialized = false;
+
+function initAudioPipeline() {
+  if (isAudioPipelineInitialized) return;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    audioCtx = new AudioContextClass();
+
+    // Create MediaElementSource from the audio tag
+    sourceNode = audioCtx.createMediaElementSource(audio);
+
+    // Bass Filter (warmth & sub-bass boost around 80Hz)
+    filterBass = audioCtx.createBiquadFilter();
+    filterBass.type = 'peaking';
+    filterBass.frequency.value = 80;
+    filterBass.Q.value = 1.0;
+    filterBass.gain.value = 4.0; // Default warm boost
+
+    // Mid range Filter (voice clarity & presence around 1kHz)
+    filterMid = audioCtx.createBiquadFilter();
+    filterMid.type = 'peaking';
+    filterMid.frequency.value = 1000;
+    filterMid.Q.value = 0.8;
+    filterMid.gain.value = 1.5; // Slight voice boost
+
+    // Treble/Clarity Filter (definition around 8kHz)
+    filterTreble = audioCtx.createBiquadFilter();
+    filterTreble.type = 'highshelf';
+    filterTreble.frequency.value = 8000;
+    filterTreble.gain.value = 3.0; // Clearer highs
+
+    // Dynamic Range Compressor (limits peak levels, reduces distortion, matches studio mastering)
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -12; // dB
+    compressor.knee.value = 30; // dB
+    compressor.ratio.value = 3;
+    compressor.attack.value = 0.003; // seconds
+    compressor.release.value = 0.08; // seconds
+
+    // Connect nodes in series: source -> Bass -> Mid -> Treble -> Compressor -> Output
+    sourceNode.connect(filterBass);
+    filterBass.connect(filterMid);
+    filterMid.connect(filterTreble);
+    filterTreble.connect(compressor);
+    compressor.connect(audioCtx.destination);
+
+    isAudioPipelineInitialized = true;
+    console.log('[HiFi-Pipeline] Web Audio dynamic processing chain activated successfully.');
+  } catch (e) {
+    console.warn('[HiFi-Pipeline] Initialization deferred or blocked (e.g. CORS or user gesture required)', e);
+  }
+}
+
+function ensureAudioCtxActive() {
+  initAudioPipeline();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(()=>{});
+  }
+}
+
+// Preset mapping
+const EQ_PRESETS = {
+  balanced: { bass: 4.0, mid: 1.5, treble: 3.0, compress: true },
+  'bass-boost': { bass: 8.5, mid: 0.5, treble: 2.0, compress: true },
+  'vocal-boost': { bass: -1.0, mid: 4.5, treble: 3.5, compress: true },
+  'treble-boost': { bass: 0.5, mid: 1.0, treble: 7.0, compress: true },
+  flat: { bass: 0.0, mid: 0.0, treble: 0.0, compress: false }
+};
+
+function applyEQPreset(presetName) {
+  ensureAudioCtxActive();
+  const preset = EQ_PRESETS[presetName] || EQ_PRESETS.balanced;
+  if (!isAudioPipelineInitialized) return;
+  
+  // Set filter gains smoothly
+  if (filterBass) filterBass.gain.setTargetAtTime(preset.bass, audioCtx.currentTime, 0.1);
+  if (filterMid) filterMid.gain.setTargetAtTime(preset.mid, audioCtx.currentTime, 0.1);
+  if (filterTreble) filterTreble.gain.setTargetAtTime(preset.treble, audioCtx.currentTime, 0.1);
+  
+  if (compressor) {
+    const thresh = preset.compress ? -12 : 0;
+    compressor.threshold.setTargetAtTime(thresh, audioCtx.currentTime, 0.1);
+  }
+  console.log(`[HiFi-Pipeline] EQ preset applied: ${presetName}`);
+}
+
+function toggleAudioEnhancer(enabled) {
+  ensureAudioCtxActive();
+  if (!isAudioPipelineInitialized) return;
+  if (enabled) {
+    const selectEl = $('#eq-preset-select');
+    applyEQPreset(selectEl ? selectEl.value : 'balanced');
+  } else {
+    applyEQPreset('flat');
+  }
+}
+
+// Prime AudioContext on first interaction
+['click', 'keydown', 'touchstart'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    ensureAudioCtxActive();
+  }, { once: true });
+});
 
 /* ═══════ API ═══════ */
 async function api(method, path, body) {
@@ -720,6 +832,16 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const expVolSlider = $('#expanded-volume-slider');
   if (expVolSlider) expVolSlider.addEventListener('input', e => setVolume(e.target.value / 100));
+
+  // Hi-Fi Sound Enhancer Event Listeners
+  $('#toggle-audio-enhancer')?.addEventListener('change', e => {
+    toggleAudioEnhancer(e.target.checked);
+  });
+  $('#eq-preset-select')?.addEventListener('change', e => {
+    if ($('#toggle-audio-enhancer')?.checked) {
+      applyEQPreset(e.target.value);
+    }
+  });
 
   const expProgressBar = $('#expanded-progress-bar');
   if (expProgressBar) {

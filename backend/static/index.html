@@ -481,6 +481,29 @@
             <input type="range" id="expanded-volume-slider" class="volume-slider" min="0" max="100" value="70" />
           </div>
 
+          <!-- Hi-Fi Sound Enhancer & Equalizer Controls -->
+          <div class="audio-enhancer-wrap" style="margin-top: 1.2rem; width: 100%; text-align: left; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px;">
+                ✨ Hi-Fi Sound Enhancer
+              </span>
+              <label class="switch-wrap" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-3); cursor: pointer;">
+                <input type="checkbox" id="toggle-audio-enhancer" checked style="cursor: pointer;" /> Enabled
+              </label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.75rem; color: var(--text-3);">Preset:</span>
+              <select id="eq-preset-select" style="flex: 1; padding: 6px; background: rgba(20,20,35,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; color: #fff; font-size: 0.8rem; outline: none; cursor: pointer;">
+                <option value="balanced" selected>🎵 Balanced (HIFI Mastered)</option>
+                <option value="bass-boost">🔊 Bass Boost (Deep & Warm)</option>
+                <option value="vocal-boost">🎙️ Vocal Boost (Clear Speech)</option>
+                <option value="treble-boost">🎸 Treble Boost (Crisp Highs)</option>
+                <option value="flat">📻 Flat (Direct Stream)</option>
+              </select>
+            </div>
+          </div>
+
+
         </div>
 
       </div>
