@@ -250,6 +250,30 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
     }
 
 
+async def get_lyrics(song_id: str) -> Optional[str]:
+    """Fetch lyrics for a song from JioSaavn."""
+    jio = get_jio()
+    try:
+        url = "https://www.jiosaavn.com/api.php"
+        params = {
+            "__call": "lyrics.getLyrics",
+            "ctx": "web6dot0",
+            "api_version": "4",
+            "_format": "json",
+            "_marker": "0",
+            "lyrics_id": song_id
+        }
+        response = await anyio.to_thread.run_sync(
+            lambda: jio.requests.get(url, params=params).json()
+        )
+        if response and "lyrics" in response:
+            return response["lyrics"]
+    except Exception as e:
+        logger.error(f"Error fetching lyrics for {song_id}: {e}")
+    return None
+
+
 async def close():
     """Close the client (no-op for jiosaavnpy)."""
     pass
+

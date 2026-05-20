@@ -71,3 +71,41 @@ class RoomHistory(Base):
     played_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     room = relationship("Room", back_populates="history", lazy="selectin")
+
+
+class LikedSong(Base):
+    __tablename__ = "liked_songs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    track_id = Column(String(50), nullable=False, index=True)
+    track_title = Column(String(200), nullable=False)
+    track_artist = Column(String(200), nullable=False)
+    track_album = Column(String(200), default="")
+    track_album_art = Column(String(500), default="")
+    track_stream_url = Column(String(1000), default="")
+    liked_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DislikedSong(Base):
+    __tablename__ = "disliked_songs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    track_id = Column(String(50), nullable=False, index=True)
+    disliked_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class UserHistory(Base):
+    __tablename__ = "user_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    track_id = Column(String(50), nullable=False)
+    track_title = Column(String(200), nullable=False)
+    track_artist = Column(String(200), nullable=False)
+    track_album = Column(String(200), default="")
+    track_album_art = Column(String(500), default="")
+    track_stream_url = Column(String(1000), default="")
+    played_at = Column(DateTime, default=datetime.datetime.utcnow)
+

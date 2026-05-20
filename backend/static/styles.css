@@ -681,3 +681,409 @@ body.has-playbar {
   .landing-hero__title { font-size:2rem; }
   .player-art-wrap { width:150px; height:150px; }
 }
+
+
+/* 🎙️ Voice Search Microphone */
+.mic-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mic-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+.mic-btn.recording {
+  animation: mic-pulse 1.2s infinite;
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 50%;
+}
+@keyframes mic-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* 📂 Profile Sub-Tabs */
+.profile-tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+.profile-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+.profile-tab:hover {
+  color: var(--text-1);
+}
+.profile-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.profile-tab-panel {
+  display: none;
+}
+.profile-tab-panel.active {
+  display: block;
+  animation: fadeUp 0.3s ease-out;
+}
+
+/* 🎧 Expanded Player Overlay */
+.expanded-player-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(10, 10, 20, 0.95);
+  backdrop-filter: blur(20px);
+  overflow-y: auto;
+  animation: slideUpPlayer 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slideUpPlayer {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.expanded-player-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.expanded-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.collapse-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+.expanded-brand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-2);
+}
+.expanded-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  flex: 1;
+  padding: 3rem 0;
+}
+.expanded-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+.large-art-wrap {
+  width: 380px;
+  height: 380px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  transition: transform 0.3s ease;
+}
+.large-art-wrap:hover {
+  transform: scale(1.02);
+}
+.large-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.large-art-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 120px;
+  background: linear-gradient(135deg, #1e1e4a, #0b0b18);
+}
+.large-art[src]:not([src=""]) ~ .large-art-placeholder {
+  display: none;
+}
+.expanded-right {
+  flex: 1;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.expanded-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+}
+.expanded-artist {
+  font-size: 1.2rem;
+  color: var(--text-2);
+  margin: 5px 0 0 0;
+}
+
+/* User feedback & interactions */
+.player-interactions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.interaction-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-2);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.interaction-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.interaction-btn.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Dropdown styling */
+.playlist-select-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-top: 8px;
+  width: 250px;
+  background: rgba(20, 20, 35, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+.playlist-select-dropdown h4 {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+.playlist-options-list {
+  max-height: 150px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.playlist-option-item {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  color: var(--text-2);
+  text-align: left;
+}
+.playlist-option-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.expanded-progress-wrap {
+  width: 100%;
+}
+.expanded-progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.expanded-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 1rem;
+}
+.ctrl-btn--play-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--bg-body);
+  font-size: 24px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+  transition: all 0.25s ease;
+}
+.ctrl-btn--play-large:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+}
+.expanded-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-3);
+  margin-top: 1rem;
+}
+.expanded-volume-wrap .volume-slider {
+  flex: 1;
+}
+
+/* Bottom Tabs Panel in Expanded Player */
+.expanded-tabs-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 250px;
+}
+.tab-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+}
+.expanded-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  padding-bottom: 8px;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+.expanded-tab-btn:hover {
+  color: var(--text-1);
+}
+.expanded-tab-btn.active {
+  color: #fff;
+}
+.expanded-tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #fff;
+  border-radius: 2px;
+}
+.tab-panels {
+  flex: 1;
+}
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Lyrics Styling */
+.lyrics-container {
+  max-width: 700px;
+  margin: 0 auto;
+  max-height: 350px;
+  overflow-y: auto;
+  text-align: center;
+  padding: 1rem;
+}
+.lyrics-text {
+  font-size: 1.4rem;
+  line-height: 2.2;
+  color: var(--text-2);
+  white-space: pre-line;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+.lyrics-text p {
+  margin-bottom: 1rem;
+}
+.lyrics-attribution {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Responsive Expanded Player */
+@media (max-width: 900px) {
+  .expanded-content {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1.5rem 0;
+  }
+  .expanded-left {
+    justify-content: center;
+  }
+  .large-art-wrap {
+    width: 250px;
+    height: 250px;
+  }
+  .expanded-right {
+    max-width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+  .expanded-title {
+    font-size: 1.6rem;
+  }
+  .tab-buttons {
+    gap: 1.5rem;
+  }
+  .expanded-tab-btn {
+    font-size: 0.95rem;
+  }
+}
+
