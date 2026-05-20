@@ -461,7 +461,7 @@ function attemptReconnect(code) { if(wsRetries >= 5) { showToast('Lost connectio
 function updateLC(c) { const el = $('#listener-count-display'); if(el && c!=null) el.textContent = c; }
 
 /* ═══════ AUDIO PLAYER ═══════ */
-function loadTrack(track, startAt = 0) {
+function loadTrack(track, startAt = 0, isRestore = false) {
   if (!track?.stream_url) return;
   if (state.currentTrack && state.currentTrack.id !== track.id) {
     state.history.push(state.currentTrack);
@@ -479,7 +479,16 @@ function loadTrack(track, startAt = 0) {
 
   updateExpandedPlayerUI();
   loadLyricsAndRelated();
-  logHistoryToBackend(track);
+  if (!isRestore) {
+    logHistoryToBackend(track);
+  }
+  // Store track in localStorage to preserve on tab close
+  try {
+    localStorage.setItem('vynce_last_track', JSON.stringify(track));
+    localStorage.setItem('vynce_last_time', startAt.toString());
+  } catch(e) {
+    console.error("[Vynce] Error saving last track:", e);
+  }
 }
 
 function togglePlay() {
@@ -560,6 +569,7 @@ async function playPrev() {
   updatePlaybackUI();
 }
 
+let lastSavedTime = 0;
 audio.addEventListener('timeupdate', () => {
   const dur = audio.duration || state.currentTrack?.duration || 0; if(!dur) return;
   const pct = (audio.currentTime/dur)*100;
@@ -570,6 +580,13 @@ audio.addEventListener('timeupdate', () => {
   const expBar = $('#expanded-progress-fill'); if(expBar) expBar.style.width = `${pct}%`;
   const expThumb = $('#expanded-progress-thumb'); if(expThumb) expThumb.style.left = `${pct}%`;
   const expCur = $('#expanded-time-current'); if(expCur) expCur.textContent = formatTime(audio.currentTime);
+
+  if (state.currentTrack && Math.abs(audio.currentTime - lastSavedTime) >= 1) {
+    try {
+      localStorage.setItem('vynce_last_time', audio.currentTime.toString());
+      lastSavedTime = audio.currentTime;
+    } catch(e) {}
+  }
 });
 audio.addEventListener('ended', () => { state.isPlaying = false; updatePlaybackUI(); playNext(); });
 audio.addEventListener('error', () => { showToast('Playback error — skipping', 'error'); playNext(); });
@@ -1119,6 +1136,33 @@ document.addEventListener('DOMContentLoaded', () => {
   if(savedToken) { state.token = savedToken; loadCurrentUser().then(handleRoute); }
   else handleRoute();
 
+  // Restore last played track if user leaves and returns
+  try {
+    const savedTrack = localStorage.getItem('vynce_last_track');
+    const savedTime = parseFloat(localStorage.getItem('vynce_last_time') || '0');
+    if (savedTrack) {
+      const track = JSON.parse(savedTrack);
+      if (track && track.stream_url) {
+        loadTrack(track, savedTime, true);
+        setTimeout(() => {
+          const dur = audio.duration || track.duration || 0;
+          if (dur) {
+            const pct = (savedTime / dur) * 100;
+            const bar = $('#progress-fill'); if(bar) bar.style.width = `${pct}%`;
+            const thumb = $('#progress-thumb'); if(thumb) thumb.style.left = `${pct}%`;
+            const cur = $('#time-current'); if(cur) cur.textContent = formatTime(savedTime);
+            
+            const expBar = $('#expanded-progress-fill'); if(expBar) expBar.style.width = `${pct}%`;
+            const expThumb = $('#expanded-progress-thumb'); if(expThumb) expThumb.style.left = `${pct}%`;
+            const expCur = $('#expanded-time-current'); if(expCur) expCur.textContent = formatTime(savedTime);
+          }
+        }, 200);
+      }
+    }
+  } catch(e) {
+    console.error("[Vynce] Error restoring last track:", e);
+  }
+
   updateVolumeUI(); updatePlaybackUI();
   console.log('[Vynce] v2 ready ✓');
 });
@@ -1532,7 +1576,7 @@ async function loadHomeSections() {
       secEl.appendChild(gridEl);
       
       recentlyPlayedSection.appendChild(secEl);
-      renderTracksInGrid(displayTracks, gridEl);
+      renderTracksInGrid(displayTracks, gridEl, true);
     }
   }
   
@@ -1572,7 +1616,7 @@ async function loadHomeSections() {
   });
 }
 
-function renderTracksInGrid(tracks, gridEl) {
+function renderTracksInGrid(tracks, gridEl, isHistory = false) {
   gridEl.innerHTML = '';
   if (!tracks.length) {
     gridEl.innerHTML = '<p class="empty-hint">No tracks found</p>';
@@ -1586,6 +1630,7 @@ function renderTracksInGrid(tracks, gridEl) {
       <div style="position:relative; width:100%; aspect-ratio:1; overflow:hidden; border-radius:var(--radius);">
         <img class="track-card-art" src="${escapeHtml(t.album_art||'')}" alt="${escapeHtml(t.title)}" loading="lazy" onerror="this.style.background='linear-gradient(135deg,#1a1a3e,#0a0a14)'" />
         <div class="track-card-overlay">
+          ${isHistory ? `<button class="overlay-remove-history-btn" title="Remove from History">&times;</button>` : ''}
           <div class="overlay-play-btn" title="Play"><svg viewBox="0 0 24 24" fill="currentColor" style="width:20px; height:20px; display:block;"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
           <div class="overlay-details">
             <span class="overlay-title">${escapeHtml(t.title)}</span>
@@ -1606,6 +1651,28 @@ function renderTracksInGrid(tracks, gridEl) {
     card.querySelector('.queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
     card.querySelector('.overlay-play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     card.querySelector('.overlay-queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
+    if (isHistory) {
+      const removeBtn = card.querySelector('.overlay-remove-history-btn');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', async e => {
+          e.stopPropagation();
+          try {
+            await api.delete(`/api/music/history/${t.id}`);
+            card.style.transform = 'scale(0.8)';
+            card.style.opacity = '0';
+            setTimeout(() => {
+              card.remove();
+              if (!gridEl.children.length) {
+                gridEl.innerHTML = '<p class="empty-hint">Your listening history is empty.</p>';
+              }
+            }, 300);
+            showToast('Removed from recently listened songs', 'success');
+          } catch (err) {
+            showToast('Error removing track from history', 'error');
+          }
+        });
+      }
+    }
     card.addEventListener('click', () => playTrack(t));
     gridEl.appendChild(card);
   });
@@ -1743,7 +1810,7 @@ async function loadHistoryProfile() {
     source: 'jiosaavn'
   }));
   
-  renderTracksInGrid(tracks, listEl);
+  renderTracksInGrid(tracks, listEl, true);
 }
 
 async function fetchUserLikedSongsList() {

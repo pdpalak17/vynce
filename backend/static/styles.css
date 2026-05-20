@@ -347,6 +347,33 @@ body {
   background:#fff; color:var(--bg); border-color:#fff; transform:scale(1.05);
 }
 
+.overlay-remove-history-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 59, 48, 0.25);
+  border: 1px solid rgba(255, 59, 48, 0.45);
+  color: #ff3b30;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+.overlay-remove-history-btn:hover {
+  background: #ff3b30;
+  color: #fff;
+  border-color: #ff3b30;
+  transform: scale(1.05);
+}
+
+
 /* Hide card info/actions for suggested tracks to make them aesthetic covers */
 .track-card.suggested-card {
   aspect-ratio:1;
