@@ -1,5 +1,5 @@
 """
-JamSync — Main FastAPI Application Entry Point.
+Vynce — Main FastAPI Application Entry Point.
 
 A real-time synchronized music listening room app.
 """

@@ -1,5 +1,5 @@
 """
-JamSync Auth Routes — Register, Login, Profile endpoints.
+Vynce Auth Routes — Register, Login, Profile endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status

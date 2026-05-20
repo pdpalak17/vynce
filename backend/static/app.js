@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   JamSync v2 — Main SPA Logic
+   Vynce v2 — Main SPA Logic
    Search · Play · Rooms · WebSocket Sync · Chat
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -22,7 +22,7 @@ const state = {
 const audio = new Audio();
 audio.crossOrigin = 'anonymous';
 audio.preload = 'auto';
-const savedVol = localStorage.getItem('jamsync_volume');
+const savedVol = localStorage.getItem('vynce_volume');
 if (savedVol !== null) state.volume = parseFloat(savedVol);
 audio.volume = state.volume;
 
@@ -139,11 +139,11 @@ async function handleLogin(e) {
   
   const remember = $('#login-remember')?.checked;
   if (remember) {
-    localStorage.setItem('jamsync_token', data.access_token);
-    sessionStorage.removeItem('jamsync_token');
+    localStorage.setItem('vynce_token', data.access_token);
+    sessionStorage.removeItem('vynce_token');
   } else {
-    sessionStorage.setItem('jamsync_token', data.access_token);
-    localStorage.removeItem('jamsync_token');
+    sessionStorage.setItem('vynce_token', data.access_token);
+    localStorage.removeItem('vynce_token');
   }
   
   hideAuthModal();
@@ -164,15 +164,15 @@ async function handleRegister(e) {
   
   const remember = $('#register-remember')?.checked;
   if (remember) {
-    localStorage.setItem('jamsync_token', data.access_token);
-    sessionStorage.removeItem('jamsync_token');
+    localStorage.setItem('vynce_token', data.access_token);
+    sessionStorage.removeItem('vynce_token');
   } else {
-    sessionStorage.setItem('jamsync_token', data.access_token);
-    localStorage.removeItem('jamsync_token');
+    sessionStorage.setItem('vynce_token', data.access_token);
+    localStorage.removeItem('vynce_token');
   }
   
   hideAuthModal();
-  showToast('Welcome to JamSync! 🎵', 'success');
+  showToast('Welcome to Vynce! 🎵', 'success');
   navigateTo('#/dashboard');
 }
 
@@ -187,8 +187,8 @@ function logout() {
   audio.pause();
   audio.src = '';
   updatePlaybackUI();
-  localStorage.removeItem('jamsync_token');
-  sessionStorage.removeItem('jamsync_token');
+  localStorage.removeItem('vynce_token');
+  sessionStorage.removeItem('vynce_token');
   if (state.ws) { state.ws.close(); state.ws = null; }
   navigateTo('#/');
 }
@@ -339,7 +339,7 @@ function togglePlay() {
 }
 
 function seekTo(pos) { if(!audio.src) return; audio.currentTime = pos; if(state.currentRoom) sendWS('seek', {position:pos}); }
-function setVolume(v) { state.volume = Math.max(0,Math.min(1,v)); audio.volume = state.volume; localStorage.setItem('jamsync_volume', state.volume); updateVolumeUI(); }
+function setVolume(v) { state.volume = Math.max(0,Math.min(1,v)); audio.volume = state.volume; localStorage.setItem('vynce_volume', state.volume); updateVolumeUI(); }
 
 async function playNext() {
   if(!state.queue.length) {
@@ -769,12 +769,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Boot
-  const savedToken = localStorage.getItem('jamsync_token') || sessionStorage.getItem('jamsync_token');
+  const savedToken = localStorage.getItem('vynce_token') || sessionStorage.getItem('vynce_token');
   if(savedToken) { state.token = savedToken; loadCurrentUser().then(handleRoute); }
   else handleRoute();
 
   updateVolumeUI(); updatePlaybackUI();
-  console.log('[JamSync] v2 ready ✓');
+  console.log('[Vynce] v2 ready ✓');
 });
 
 /* ══════════════ ADDITIONAL HELPER FUNCTIONS ══════════════ */

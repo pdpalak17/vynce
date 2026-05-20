@@ -1,5 +1,5 @@
 """
-JamSync JioSaavn Service — Async client for JioSaavn API.
+Vynce JioSaavn Service — Async client for JioSaavn API.
 Provides access to Bollywood, Hindi, and Indian music catalog.
 Uses the local jiosaavnpy library directly.
 """

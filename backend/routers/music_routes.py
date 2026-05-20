@@ -1,5 +1,5 @@
 """
-JamSync Music Routes — Search, trending, albums, and song details.
+Vynce Music Routes — Search, trending, albums, and song details.
 Uses JioSaavn (primary) for Bollywood + Jamendo (secondary) for CC music.
 """
 

@@ -1,10 +1,10 @@
 databases:
-  - name: jamsync-db
+  - name: vynce-db
     plan: free
 
 services:
   - type: web
-    name: jamsync
+    name: vynce
     runtime: python
     plan: free
     buildCommand: pip install -r backend/requirements.txt
@@ -12,7 +12,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: jamsync-db
+          name: vynce-db
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
