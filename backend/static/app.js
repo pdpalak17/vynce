@@ -36,13 +36,19 @@ async function api(method, path, body) {
     const res = await fetch(path, opts);
     if (res.status === 401) { logout(); showToast('Session expired', 'error'); return null; }
     if (!res.ok) {
-      const e = await res.json().catch(()=>({detail:res.statusText}));
+      const text = await res.text().catch(() => '');
+      let detail = res.statusText;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && parsed.detail) detail = parsed.detail;
+      } catch (_) {}
+      
       let msg = 'Request failed';
-      if (e && e.detail) {
-        if (typeof e.detail === 'string') {
-          msg = e.detail;
-        } else if (Array.isArray(e.detail)) {
-          msg = e.detail.map(err => {
+      if (detail) {
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map(err => {
             const field = err.loc ? err.loc[err.loc.length - 1] : '';
             return field ? `${field}: ${err.msg}` : err.msg;
           }).join(', ');
@@ -51,7 +57,22 @@ async function api(method, path, body) {
       throw new Error(msg);
     }
     if (res.status === 204) return null;
-    return await res.json();
+    
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await res.json();
+    }
+    
+    // Fallback text check
+    const text = await res.text();
+    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+      throw new Error('Server returned HTML instead of JSON. The backend server might still be starting up or is offline.');
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      throw new Error('Server response was not valid JSON.');
+    }
   } catch (e) { showToast(e.message || 'Network error', 'error'); console.error(`[API] ${method} ${path}`, e); return null; }
 }
 api.get = p => api('GET', p);
