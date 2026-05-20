@@ -166,7 +166,12 @@ async function api(method, path, body) {
           }).join(', ');
         }
       }
-      throw new Error(msg);
+      const err = new Error(msg);
+      // Mark as client error if it's a 4xx error (except 401 which is already handled)
+      if (res.status >= 400 && res.status < 500) {
+        err.isClientError = true;
+      }
+      throw err;
     }
     if (res.status === 204) return null;
     
@@ -185,7 +190,15 @@ async function api(method, path, body) {
     } catch (_) {
       throw new Error('Server response was not valid JSON.');
     }
-  } catch (e) { showToast(e.message || 'Network error', 'error'); console.error(`[API] ${method} ${path}`, e); return null; }
+  } catch (e) {
+    // Stop all technical/network/parsing error notifications from coming to the user.
+    // They are logged in console and hidden from the users. Only client input errors (4xx) are shown.
+    if (e && e.isClientError) {
+      showToast(e.message || 'Request failed', 'error');
+    }
+    console.error(`[API] ${method} ${path}`, e);
+    return null;
+  }
 }
 api.get = p => api('GET', p);
 api.post = (p, b) => api('POST', p, b);
