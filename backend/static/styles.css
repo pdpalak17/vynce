@@ -289,7 +289,8 @@ body {
 }
 .track-card {
   background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
-  overflow:hidden; transition:all .3s ease; cursor:pointer; animation:fadeUp .4s ease both;
+  overflow:hidden; transition:all .3s cubic-bezier(0.4, 0, 0.2, 1); cursor:pointer; animation:fadeUp .4s ease both;
+  position: relative;
 }
 .track-card:hover { transform:translateY(-4px); border-color:var(--border-hover); box-shadow:var(--shadow); }
 .track-card-art {
@@ -301,12 +302,68 @@ body {
 .track-card-artist { font-size:12px; color:var(--text-3); display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .track-card-actions { display:flex; gap:6px; padding:0 12px 12px; }
 .track-card-actions .btn { font-size:11px; padding:5px 10px; }
+
+/* Interactive overlay for suggested items (cover-only) */
 .track-card-overlay {
-  position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex;
-  align-items:center; justify-content:center; opacity:0; transition:opacity .2s;
-  font-size:32px;
+  position:absolute; inset:0;
+  background:linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.15) 100%);
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:12px; opacity:0; transition:opacity .25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index:2;
 }
 .track-card:hover .track-card-overlay { opacity:1; }
+
+.overlay-play-btn {
+  background:var(--primary); color:#fff;
+  width:42px; height:42px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  margin:auto; box-shadow:0 4px 12px rgba(0, 229, 255, 0.35);
+  transition:all 0.2s ease;
+}
+.overlay-play-btn:hover {
+  transform:scale(1.1); background:#fff; color:var(--primary);
+}
+.overlay-details {
+  display:flex; flex-direction:column; gap:2px;
+  margin-top:auto; text-align:left;
+  max-width:calc(100% - 24px);
+}
+.overlay-title {
+  font-size:13px; font-weight:600; color:#fff;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.overlay-artist {
+  font-size:11px; color:rgba(255,255,255,0.7);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.overlay-queue-btn {
+  position:absolute; top:10px; right:10px;
+  background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25);
+  color:#fff; width:24px; height:24px; border-radius:50%;
+  font-size:14px; font-weight:500; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all 0.2s ease;
+}
+.overlay-queue-btn:hover {
+  background:#fff; color:var(--bg); border-color:#fff; transform:scale(1.05);
+}
+
+/* Hide card info/actions for suggested tracks to make them aesthetic covers */
+.track-card.suggested-card {
+  aspect-ratio:1;
+}
+.track-card.suggested-card .track-card-info,
+.track-card.suggested-card .track-card-actions {
+  display:none !important;
+}
+
+/* Non-suggested cards (search result cards) should not show duplicate details inside overlay */
+.track-card:not(.suggested-card) .overlay-details,
+.track-card:not(.suggested-card) .overlay-queue-btn {
+  display:none !important;
+}
+.track-card:not(.suggested-card) .track-card-overlay {
+  background:rgba(0,0,0,0.5);
+}
 
 /* Track skeleton */
 .track-skeleton {

@@ -712,24 +712,35 @@ function renderTrackCards(tracks, sel) {
   const c = $(sel); if(!c) return;
   c.innerHTML = '';
   if(!tracks.length) { c.innerHTML = '<p class="empty-hint">No tracks found</p>'; return; }
+  const isSearch = (sel === '#search-results');
   tracks.forEach((t, i) => {
     const card = document.createElement('div');
-    card.className = 'track-card'; card.style.animationDelay = `${i*0.04}s`;
+    card.className = 'track-card' + (isSearch ? '' : ' suggested-card');
+    card.style.animationDelay = `${i*0.04}s`;
     card.innerHTML = `
-      <div style="position:relative">
+      <div style="position:relative; width:100%; aspect-ratio:1; overflow:hidden; border-radius:var(--radius);">
         <img class="track-card-art" src="${escapeHtml(t.album_art||'')}" alt="${escapeHtml(t.title)}" loading="lazy" onerror="this.style.background='linear-gradient(135deg,#1a1a3e,#0a0a14)'" />
-        <div class="track-card-overlay">▶</div>
+        <div class="track-card-overlay">
+          <div class="overlay-play-btn" title="Play"><svg viewBox="0 0 24 24" fill="currentColor" style="width:20px; height:20px; display:block;"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <div class="overlay-details">
+            <span class="overlay-title">${escapeHtml(t.title)}</span>
+            <span class="overlay-artist">${escapeHtml(t.artist)}</span>
+          </div>
+          <button class="overlay-queue-btn" title="Add to Queue">+</button>
+        </div>
       </div>
       <div class="track-card-info">
         <span class="track-card-title">${escapeHtml(t.title)}</span>
         <span class="track-card-artist">${escapeHtml(t.artist)}</span>
       </div>
       <div class="track-card-actions">
-        <button class="btn btn-primary btn-sm play-btn">▶ Play</button>
+        <button class="btn btn-primary btn-sm play-btn" style="display: flex; align-items: center; justify-content: center; gap: 4px;"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px; height:12px; display:inline-block;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play</button>
         <button class="btn btn-ghost btn-sm queue-btn">+ Queue</button>
       </div>`;
     card.querySelector('.play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     card.querySelector('.queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
+    card.querySelector('.overlay-play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
+    card.querySelector('.overlay-queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
     card.addEventListener('click', () => playTrack(t));
     c.appendChild(card);
   });
@@ -1569,23 +1580,32 @@ function renderTracksInGrid(tracks, gridEl) {
   }
   tracks.forEach((t, i) => {
     const card = document.createElement('div');
-    card.className = 'track-card';
+    card.className = 'track-card suggested-card';
     card.style.animationDelay = `${i*0.04}s`;
     card.innerHTML = `
-      <div style="position:relative">
+      <div style="position:relative; width:100%; aspect-ratio:1; overflow:hidden; border-radius:var(--radius);">
         <img class="track-card-art" src="${escapeHtml(t.album_art||'')}" alt="${escapeHtml(t.title)}" loading="lazy" onerror="this.style.background='linear-gradient(135deg,#1a1a3e,#0a0a14)'" />
-        <div class="track-card-overlay">▶</div>
+        <div class="track-card-overlay">
+          <div class="overlay-play-btn" title="Play"><svg viewBox="0 0 24 24" fill="currentColor" style="width:20px; height:20px; display:block;"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <div class="overlay-details">
+            <span class="overlay-title">${escapeHtml(t.title)}</span>
+            <span class="overlay-artist">${escapeHtml(t.artist)}</span>
+          </div>
+          <button class="overlay-queue-btn" title="Add to Queue">+</button>
+        </div>
       </div>
       <div class="track-card-info">
         <span class="track-card-title">${escapeHtml(t.title)}</span>
         <span class="track-card-artist">${escapeHtml(t.artist)}</span>
       </div>
       <div class="track-card-actions">
-        <button class="btn btn-primary btn-sm play-btn">▶ Play</button>
+        <button class="btn btn-primary btn-sm play-btn" style="display: flex; align-items: center; justify-content: center; gap: 4px;"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px; height:12px; display:inline-block;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play</button>
         <button class="btn btn-ghost btn-sm queue-btn">+ Queue</button>
       </div>`;
     card.querySelector('.play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     card.querySelector('.queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
+    card.querySelector('.overlay-play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
+    card.querySelector('.overlay-queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
     card.addEventListener('click', () => playTrack(t));
     gridEl.appendChild(card);
   });
