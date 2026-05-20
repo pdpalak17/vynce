@@ -319,7 +319,7 @@ async function handleRegister(e) {
   }
   
   hideAuthModal();
-  showToast('Welcome to Vynce! 🎵', 'success');
+  showToast('Welcome to Vynce!', 'success');
   navigateTo('#/dashboard');
 }
 
@@ -407,8 +407,8 @@ function renderRoomCards(rooms, sel) {
     card.className = 'room-card';
     card.innerHTML = `
       <div class="room-card-name">${escapeHtml(r.name)}</div>
-      <div class="room-card-listeners">👥 ${r.listener_count ?? 0} listening</div>
-      <div class="room-card-track">${r.current_track ? `♫ ${escapeHtml(r.current_track.title)}` : 'No track playing'}</div>
+      <div class="room-card-listeners">${r.listener_count ?? 0} listening</div>
+      <div class="room-card-track">${r.current_track ? escapeHtml(r.current_track.title) : 'No track playing'}</div>
       <div class="room-card-actions">
         <button class="btn btn-primary btn-sm join-btn">Join Room</button>
       </div>`;
@@ -659,7 +659,7 @@ function renderSearchHistory() {
     const row = document.createElement('div');
     row.className = 'search-history-item';
     row.innerHTML = `
-      <span class="search-history-item-text">🕒 ${escapeHtml(item)}</span>
+      <span class="search-history-item-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg" style="width: 14px; height: 14px; margin-right: 6px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${escapeHtml(item)}</span>
       <button class="remove-history-item-btn" title="Remove">&times;</button>
     `;
     
@@ -937,7 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $$('.genre-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       const genre = chip.dataset.genre;
-      const t = $('#genre-results-title'); if(t) t.textContent = `🎭 ${chip.textContent.trim()}`;
+      const t = $('#genre-results-title'); if(t) t.textContent = chip.textContent.trim();
       const sec = $('#genre-results-section'); if(sec) sec.style.display = '';
       const c = $('#genre-results'); if(c) c.innerHTML = '<div class="track-skeleton"></div><div class="track-skeleton"></div>';
       const tracks = await searchMusic(genre);
@@ -1513,7 +1513,7 @@ async function loadHomeSections() {
       
       const titleEl = document.createElement('h2');
       titleEl.className = 'section-title';
-      titleEl.textContent = '🕒 Recently Played';
+      titleEl.textContent = 'Recently Played';
       secEl.appendChild(titleEl);
       
       const gridEl = document.createElement('div');
@@ -1638,11 +1638,11 @@ async function loadPlaylistsProfile() {
     try { tracks = JSON.parse(pl.tracks || '[]'); } catch (e) { tracks = []; }
     
     card.innerHTML = `
-      <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0;">📁 ${escapeHtml(pl.name)}</h3>
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg" style="margin-right:0;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>${escapeHtml(pl.name)}</h3>
       <span style="font-size: 0.85rem; color: var(--text-3);">${tracks.length} songs</span>
       <div class="playlist-card-actions" style="margin-top: 12px; display: flex; gap: 8px;">
-        <button class="btn btn-primary btn-sm play-pl-btn" ${tracks.length === 0 ? 'disabled' : ''}>▶ Play</button>
-        <button class="btn btn-ghost btn-sm delete-pl-btn">🗑️ Delete</button>
+        <button class="btn btn-primary btn-sm play-pl-btn" ${tracks.length === 0 ? 'disabled' : ''} style="display: flex; align-items: center; justify-content: center; gap: 4px;"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px; height:12px; display:inline-block;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play</button>
+        <button class="btn btn-ghost btn-sm delete-pl-btn" style="display: flex; align-items: center; justify-content: center; gap: 4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; display:inline-block;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete</button>
       </div>
     `;
     

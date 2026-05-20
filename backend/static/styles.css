@@ -1322,3 +1322,47 @@ body.has-playbar {
     right: 8px;
   }
 }
+
+/* Elegant SVG styling for controls and icons */
+.btn-svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.ctrl-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.ctrl-btn--play svg {
+  width: 16px;
+  height: 16px;
+  margin-left: 2px; /* Slight centering adjustment for play triangle */
+}
+.ctrl-btn--play-large svg {
+  width: 24px;
+  height: 24px;
+}
+.ctrl-btn--play-large .icon-play svg {
+  margin-left: 3px; /* Centering for large play triangle */
+}
+.search-box__icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-3);
+  display: block;
+}
+.mic-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-2);
+  display: block;
+}
+
