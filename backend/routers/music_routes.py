@@ -360,3 +360,20 @@ async def get_history(
     )
     return result.scalars().all()
 
+
+@router.delete("/history/{track_id}")
+async def delete_history_track(
+    track_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a track or tracks with a given track_id from user's history."""
+    await db.execute(
+        delete(UserHistory)
+        .where(UserHistory.user_id == user.id)
+        .where(UserHistory.track_id == track_id)
+    )
+    await db.commit()
+    return {"message": "Track removed from history"}
+
+
