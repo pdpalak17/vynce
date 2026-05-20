@@ -1109,3 +1109,21 @@ body.has-playbar {
   100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
 }
 
+/* Audio Enhancer and EQ styles */
+.audio-enhancer-wrap {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.audio-enhancer-wrap:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(0, 229, 255, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+#eq-preset-select {
+  transition: all 0.2s ease;
+}
+#eq-preset-select:focus {
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+
+
