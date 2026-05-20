@@ -1,111 +1,138 @@
 # 🎵 JamSync — Listen Together, Vibe Together
 
-A free, real-time synchronized music listening room app. Create rooms, invite friends, and listen to the same song at the same time — like a virtual DJ room.
+JamSync is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
 
-![JamSync](https://img.shields.io/badge/JamSync-v1.0.0-7B2FFF?style=for-the-badge)
+Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page application (SPA) frontend, JamSync brings high-fidelity music streaming, smart recommendations, voice search, and personal playlist management directly to your browser.
+
+![JamSync](https://img.shields.io/badge/JamSync-v2.0.0-00E5FF?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10+-00D4FF?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-00FF88?style=for-the-badge&logo=fastapi&logoColor=white)
+![WebSockets](https://img.shields.io/badge/WebSockets-Real--Time-FF007F?style=for-the-badge&logo=socket.io&logoColor=white)
+
+---
 
 ## ✨ Features
 
-- 🎧 **Synchronized Playback** — Everyone in a room hears the same song at the same time
-- 💬 **Live Chat** — Chat with other listeners in real-time
-- 🔍 **Music Search** — Search 600k+ free tracks from Jamendo + Deezer previews
-- 📋 **Playlists** — Create and manage personal playlists
-- 🎛️ **Queue System** — Queue up songs for continuous listening
-- 👥 **Room Management** — Create public/private rooms with invite codes
-- 🔒 **User Accounts** — Register, login, and manage your profile
-- 🆓 **100% Free** — No subscriptions, no ads, powered by Creative Commons music
+### 🎙️ 1. Voice-Activated Search
+* **Voice Search Integration**: Search for songs hands-free using the built-in microphone button on the search bar.
+* **HTML5 Web Speech API**: Leverages browser-native `SpeechRecognition` (configured for `en-IN` to capture regional Indian titles and accents accurately).
+* **Pulsing Animation Status**: Active recording state displays a glowing, pulsing mic ring.
 
-## 🚀 Quick Start
+### 🎧 2. Premium YouTube Music-style Overlay Player
+* **Glassmorphism Design**: Full-screen sliding overlay featuring a blurry backdrop, premium dark color palette, and micro-animations.
+* **Synchronized Progress & Volume**: Fluid range sliders syncing time-elapsed, duration, and volume settings between the small player bar and full screen overlays.
+* **Song Actions**: 
+  * **Like**: Persists tracks in your Liked Songs library.
+  * **Dislike**: Automatically dislikes the track and skips to the next item in the queue.
+  * **Add to Playlist**: Drop-up selector to instantly save the track to any of your custom playlists.
 
-### Prerequisites
-- Python 3.10+
-- A free [Jamendo API Client ID](https://developer.jamendo.com)
+### 📑 3. Interactive Player Tabs
+* **Up Next**: Displays the upcoming tracks queue. Clicking any song instantly plays it and advances the queue.
+* **Lyrics**: Queries JioSaavn's internal lyrics service dynamically to parse and render formatted song lyrics.
+* **Related**: Generates 12 curated track recommendations based on the active song's similarity profile.
 
-### 1. Clone & Install
+### 📂 4. Tabbed User Profile & Playlists (CRUD)
+* **Playlists Management**: Create, delete, and list custom playlists. Play entire playlists to queue them all at once.
+* **Liked Songs**: A dedicated catalog showing all favorited tracks.
+* **Listening History**: Tracks and stores every song you play in an SQLite database, showing a chronological timeline of your recent streams just like Spotify.
 
-```bash
-cd jamsync
-pip install -r backend/requirements.txt
-```
+### 🔀 5. Dynamic Curation & Shuffling Homepage
+* Shuffles and curates 5 dynamic categories (*Trending, Romantic, Sad, Party, For You*) upon opening the dashboard.
+* Shuffling of categories and tracks ensures a fresh layout on every visit.
 
-### 2. Configure
+### 👥 6. Real-Time WebSocket Rooms
+* **Low-Latency Sync**: Seamlessly syncs play, pause, seek, and track-load actions across all room participants.
+* **Live Chat Bubble**: Converse with everyone in the room. Shows unique color-coded user avatars.
+* **Listener list**: Shows live indicators of users active in the session.
 
-```bash
-# Copy the example env file
-cp .env.example .env
-
-# Edit .env and add your Jamendo Client ID
-# Get one free at: https://developer.jamendo.com
-```
-
-### 3. Run
-
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 4. Open
-
-Navigate to [http://localhost:8000](http://localhost:8000) 🎉
+---
 
 ## 🏗️ Architecture
 
 ```
 jamsync/
 ├── backend/
-│   ├── main.py              # FastAPI app + WebSocket endpoint
+│   ├── main.py              # FastAPI app setup, static mounting, and WS server
 │   ├── config.py            # Environment configuration
-│   ├── database.py          # SQLAlchemy async setup
-│   ├── models.py            # DB models (User, Room, Playlist)
-│   ├── schemas.py           # Pydantic validation schemas
-│   ├── auth.py              # JWT authentication
+│   ├── database.py          # SQLAlchemy async DB session setup
+│   ├── models.py            # SQLite SQL models (User, Room, Playlist, LikedSong, UserHistory)
+│   ├── schemas.py           # Pydantic schemas for data serialization and verification
+│   ├── auth.py              # JWT authentication & password hashing
 │   ├── routers/
-│   │   ├── auth_routes.py   # Login/Register
-│   │   ├── room_routes.py   # Room CRUD
-│   │   ├── music_routes.py  # Music search/trending
-│   │   └── playlist_routes.py
+│   │   ├── auth_routes.py   # User Login/Register endpoints
+│   │   ├── room_routes.py   # Room management CRUD endpoints
+│   │   ├── music_routes.py  # Search, lyrics, liked songs, history & curation APIs
+│   │   └── playlist_routes.py # Playlist CRUD endpoints
 │   ├── services/
-│   │   ├── jamendo.py       # Jamendo API client
-│   │   ├── deezer.py        # Deezer API client
-│   │   └── room_manager.py  # WebSocket room sync
-│   └── static/              # Frontend SPA
-│       ├── index.html
-│       ├── styles.css
-│       └── app.js
-├── .env.example
-├── render.yaml              # Render.com deployment
-├── Procfile                 # Alternative deployment
-└── README.md
+│   │   ├── jiosaavn.py      # JioSaavn API client (with proxy bypass header injection)
+│   │   ├── jamendo.py       # Jamendo API client fallback
+│   │   └── room_manager.py  # WebSocket state sync engine
+│   └── static/              # Frontend Single-Page App (SPA)
+│       ├── index.html       # HTML layouts, overlays, and modals
+│       ├── styles.css       # HSL variables, dark theme, overlays, animations
+│       └── app.js           # Core JS SPA router, Speech API, audio, & WS sync
+├── .env.example             # Template for configuration
+├── LICENSE                  # MIT License File
+├── render.yaml              # Render.com deployment setup
+├── Procfile                 # Production WSGI process file
+└── README.md                # System documentation
 ```
 
-## 🎵 Music Sources
+---
 
-| Source | Type | Catalog |
-|--------|------|---------|
-| **Jamendo** | Full-length CC tracks | 600,000+ tracks |
-| **Deezer** | 30-second previews | Millions of tracks |
+## 🛠️ Tech Stack
+* **Backend**: FastAPI (Python) + WebSockets
+* **Database**: SQLite + SQLAlchemy (Async engine)
+* **Auth**: JWT tokens + bcrypt hashing
+* **Music Source**: JioSaavn API (with fallback support) + geo-restriction bypass proxy headers
+* **Frontend**: Vanilla HTML5 / CSS3 / JavaScript (ES6)
+* **Design Guidelines**: Glassmorphism, CSS animations, HSL variables
 
-## 🌐 Deploy to Render (Free)
+---
 
-1. Push code to a GitHub repo
-2. Go to [render.com](https://render.com) → New → Web Service
-3. Connect your repo
-4. Set environment variables:
-   - `JWT_SECRET` → Generate a random secret
-   - `JAMENDO_CLIENT_ID` → Your Jamendo key
-5. Deploy! 🚀
+## 🚀 Local Setup Guide
 
-## 🔧 Tech Stack
+### 1. Prerequisites
+* Python 3.10+ installed on your computer.
 
-- **Backend**: FastAPI (Python) + WebSockets
-- **Database**: SQLite + SQLAlchemy (async)
-- **Auth**: JWT + bcrypt
-- **Music**: Jamendo API + Deezer API
-- **Frontend**: Vanilla HTML/CSS/JS
-- **Design**: Glassmorphism + Neon accents
+### 2. Clone and Install Dependencies
+Navigate to your project directory and install backend requirements:
+```bash
+pip install -r backend/requirements.txt
+```
+
+### 3. Setup Environment Variables
+Create a `.env` file in the root directory by copying the example:
+```bash
+cp .env.example .env
+```
+Ensure you set a secure `JWT_SECRET` value.
+
+### 4. Run the Dev Server
+Launch the FastAPI server using `uvicorn`:
+```bash
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 5. Access JamSync
+Open [http://localhost:8000](http://localhost:8000) in your web browser. 🎉
+
+---
+
+## 🌐 Deployment to Render.com
+1. Commit and push the code to your GitHub repository.
+2. Sign in to [Render.com](https://render.com) and create a **New Web Service**.
+3. Link your GitHub repository.
+4. Set the following Environment Variables:
+   * `JWT_SECRET`: A secure random password hashing string.
+5. Render will automatically read `render.yaml` or you can deploy with:
+   * **Build Command**: `pip install -r backend/requirements.txt`
+   * **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+6. Deploy! 🚀
+
+---
 
 ## 📄 License
+JamSync is licensed under the [MIT License](file:///C:/Users/palak/.gemini/antigravity/scratch/jamsync/LICENSE). 
 
-MIT License. Music provided via Jamendo is under Creative Commons licenses.
+*Note: Streamed music is powered by external public catalogs. Please check the licensing guidelines of individual music providers for commercial usage.*
