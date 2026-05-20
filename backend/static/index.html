@@ -142,6 +142,7 @@
         <div class="search-box">
           <span class="search-box__icon">🔍</span>
           <input type="text" id="search-music-input" class="search-box__input" placeholder="Search Bollywood songs, artists, albums..." autocomplete="off" />
+          <button id="btn-search-mic" class="mic-btn" title="Search with your voice">🎙️</button>
         </div>
       </div>
       <div class="dash-header__right">
@@ -168,16 +169,18 @@
         <div id="search-results" class="tracks-grid"></div>
       </section>
 
-      <!-- Trending -->
-      <section class="dash-section">
-        <h2 class="section-title">🔥 Trending Bollywood</h2>
-        <div id="trending-tracks" class="tracks-grid">
-          <div class="track-skeleton"></div>
-          <div class="track-skeleton"></div>
-          <div class="track-skeleton"></div>
-          <div class="track-skeleton"></div>
-        </div>
-      </section>
+      <!-- Dynamic Home Sections -->
+      <div id="dynamic-home-sections">
+        <section class="dash-section">
+          <h2 class="section-title">🔥 Trending Hits</h2>
+          <div class="tracks-grid">
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+          </div>
+        </section>
+      </div>
 
       <!-- Quick Genres -->
       <section class="dash-section">
@@ -260,7 +263,11 @@
 
         <!-- Room Search -->
         <div class="room-search-wrap">
-          <input type="text" id="room-search-input" class="search-box__input" placeholder="🔍 Search songs to play..." />
+          <div class="search-box" style="flex: 1; width: 100%;">
+            <span class="search-box__icon">🔍</span>
+            <input type="text" id="room-search-input" class="search-box__input" placeholder="Search songs to play..." style="padding-left: 2.5rem;" />
+            <button id="btn-room-search-mic" class="mic-btn" title="Search with your voice">🎙️</button>
+          </div>
           <div id="room-search-results" class="room-search-results"></div>
         </div>
 
@@ -305,11 +312,41 @@
         <h2 id="profile-username">Username</h2>
         <p id="profile-email" class="text-muted">email@example.com</p>
       </div>
-      <section class="dash-section">
-        <h2 class="section-title">📂 My Playlists</h2>
-        <button id="btn-create-playlist" class="btn btn-ghost btn-sm">+ New Playlist</button>
-        <div id="playlists-list" class="playlists-grid"></div>
-      </section>
+      <div class="profile-tabs">
+        <button class="profile-tab active" data-tab="playlists">📁 My Playlists</button>
+        <button class="profile-tab" data-tab="liked">❤️ Liked Songs</button>
+        <button class="profile-tab" data-tab="history">⏳ History</button>
+      </div>
+
+      <div id="profile-playlists-tab" class="profile-tab-panel active">
+        <section class="dash-section">
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 class="section-title" style="margin-bottom: 0;">My Playlists</h2>
+            <button id="btn-create-playlist" class="btn btn-primary btn-sm">+ New Playlist</button>
+          </div>
+          <div id="playlists-list" class="playlists-grid">
+            <p class="empty-hint">You haven't created any playlists yet.</p>
+          </div>
+        </section>
+      </div>
+
+      <div id="profile-liked-tab" class="profile-tab-panel">
+        <section class="dash-section">
+          <h2 class="section-title">Liked Songs</h2>
+          <div id="profile-liked-songs-list" class="tracks-grid">
+            <p class="empty-hint">Your liked songs will show up here.</p>
+          </div>
+        </section>
+      </div>
+
+      <div id="profile-history-tab" class="profile-tab-panel">
+        <section class="dash-section">
+          <h2 class="section-title">Listening History</h2>
+          <div id="profile-history-list" class="tracks-grid">
+            <p class="empty-hint">Your listening history is empty.</p>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
@@ -353,6 +390,124 @@
         </button>
         <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="70" />
       </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 7. EXPANDED PLAYER PANEL ═══════════ -->
+  <div id="expanded-player" class="expanded-player-overlay" style="display:none;">
+    <div class="expanded-player-container">
+      
+      <!-- Top header -->
+      <header class="expanded-header">
+        <button id="btn-collapse-player" class="collapse-btn" aria-label="Minimize">▼ Minimize</button>
+        <span class="expanded-brand">🎵 JamSync Player</span>
+        <div style="width: 70px;"></div> <!-- Spacer -->
+      </header>
+
+      <!-- Center layout -->
+      <div class="expanded-content">
+        
+        <!-- Left panel: Big album art -->
+        <div class="expanded-left">
+          <div class="large-art-wrap">
+            <img id="expanded-album-art" class="large-art" src="" alt="Album Art" />
+            <div id="expanded-placeholder-icon" class="large-art-placeholder">🎵</div>
+          </div>
+        </div>
+
+        <!-- Right panel: Controls & User Feedback -->
+        <div class="expanded-right">
+          
+          <!-- Song metadata -->
+          <div class="expanded-info">
+            <h1 id="expanded-track-title" class="expanded-title">No track playing</h1>
+            <p id="expanded-track-artist" class="expanded-artist">Choose a track</p>
+          </div>
+
+          <!-- User interactions -->
+          <div class="player-interactions">
+            <button id="btn-player-like" class="interaction-btn" title="Like song">
+              <span class="icon-like-inactive">👍 Like</span>
+              <span class="icon-like-active" style="display:none;">💚 Liked</span>
+            </button>
+            <button id="btn-player-dislike" class="interaction-btn" title="Dislike song">👎 Dislike</button>
+            <div class="save-btn-wrap" style="position: relative; display: inline-block;">
+              <button id="btn-player-save" class="interaction-btn" title="Add to Playlist">📁 Add to Playlist</button>
+              
+              <!-- Playlist selector dropdown -->
+              <div id="player-playlist-dropdown" class="playlist-select-dropdown" style="display:none;">
+                <h4>Select Playlist</h4>
+                <div id="player-playlists-options-list" class="playlist-options-list"></div>
+                <button id="btn-dropdown-create-playlist" class="btn btn-ghost btn-sm">+ Create New</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Player Progress & Time -->
+          <div class="expanded-progress-wrap">
+            <div class="expanded-progress-bar-container">
+              <span id="expanded-time-current" class="player-time">0:00</span>
+              <div id="expanded-progress-bar" class="progress-bar">
+                <div id="expanded-progress-fill" class="progress-fill"></div>
+                <div id="expanded-progress-thumb" class="progress-thumb"></div>
+              </div>
+              <span id="expanded-time-total" class="player-time">0:00</span>
+            </div>
+          </div>
+
+          <!-- Expanded Control buttons -->
+          <div class="expanded-controls">
+            <button id="btn-player-prev" class="ctrl-btn ctrl-btn--sm" title="Previous">⏮</button>
+            <button id="btn-player-play-pause" class="ctrl-btn ctrl-btn--play-large" title="Play">
+              <span class="icon-play">▶</span>
+              <span class="icon-pause" style="display:none">⏸</span>
+            </button>
+            <button id="btn-player-next" class="ctrl-btn ctrl-btn--sm" title="Next">⏭</button>
+          </div>
+
+          <!-- Volume Controls -->
+          <div class="expanded-volume-wrap">
+            <span>🔊</span>
+            <input type="range" id="expanded-volume-slider" class="volume-slider" min="0" max="100" value="70" />
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Bottom Tabs Section -->
+      <div class="expanded-tabs-section">
+        <div class="tab-buttons">
+          <button class="expanded-tab-btn active" data-tab="upnext">UP NEXT</button>
+          <button class="expanded-tab-btn" data-tab="lyrics">LYRICS</button>
+          <button class="expanded-tab-btn" data-tab="related">RELATED</button>
+        </div>
+
+        <div class="tab-panels">
+          <!-- Up Next Queue Tab -->
+          <div id="panel-upnext" class="tab-panel active">
+            <div id="expanded-queue-list" class="queue-list">
+              <p class="empty-hint">No upcoming tracks in queue.</p>
+            </div>
+          </div>
+
+          <!-- Lyrics Tab -->
+          <div id="panel-lyrics" class="tab-panel">
+            <div id="lyrics-container" class="lyrics-container">
+              <p class="lyrics-text">Select a song with lyrics to display them here.</p>
+            </div>
+            <p id="lyrics-attribution" class="lyrics-attribution"></p>
+          </div>
+
+          <!-- Related songs Tab -->
+          <div id="panel-related" class="tab-panel">
+            <div id="expanded-related-list" class="tracks-grid">
+              <p class="empty-hint">Loading recommendations...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 

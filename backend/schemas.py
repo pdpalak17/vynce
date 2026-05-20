@@ -107,3 +107,59 @@ class PlaylistResponse(BaseModel):
 class WSMessage(BaseModel):
     type: str
     data: Optional[dict] = None
+
+
+# ── Liked & History Schemas ───────────────────────────────────────────────────
+
+class LikedSongCreate(BaseModel):
+    track_id: str
+    track_title: str
+    track_artist: str
+    track_album: Optional[str] = ""
+    track_album_art: Optional[str] = ""
+    track_stream_url: Optional[str] = ""
+
+
+class LikedSongResponse(BaseModel):
+    id: int
+    user_id: str
+    track_id: str
+    track_title: str
+    track_artist: str
+    track_album: Optional[str] = ""
+    track_album_art: Optional[str] = ""
+    track_stream_url: Optional[str] = ""
+    liked_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserHistoryCreate(BaseModel):
+    track_id: str
+    track_title: str
+    track_artist: str
+    track_album: Optional[str] = ""
+    track_album_art: Optional[str] = ""
+    track_stream_url: Optional[str] = ""
+
+
+class UserHistoryResponse(BaseModel):
+    id: int
+    user_id: str
+    track_id: str
+    track_title: str
+    track_artist: str
+    track_album: Optional[str] = ""
+    track_album_art: Optional[str] = ""
+    track_stream_url: Optional[str] = ""
+    played_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class HomeSectionResponse(BaseModel):
+    title: str
+    tracks: List[dict]
+
