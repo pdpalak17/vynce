@@ -2,7 +2,7 @@
 
 Vynce is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
 
-Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page application (SPA) frontend, Vynce brings high-fidelity music streaming, smart recommendations, voice search, and personal playlist management directly to your browser.
+Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page application (SPA) frontend, Vynce brings high-fidelity music streaming from an expansive library of **over 80+ Million tracks**, smart recommendations, voice search, and personal playlist management directly to your browser.
 
 ![Vynce](https://img.shields.io/badge/Vynce-v2.0.0-00E5FF?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10+-00D4FF?style=for-the-badge&logo=python&logoColor=white)
@@ -36,11 +36,21 @@ Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page ap
 * **Liked Songs**: A dedicated catalog showing all favorited tracks.
 * **Listening History**: Tracks and stores every song you play in an SQLite database, showing a chronological timeline of your recent streams just like Spotify.
 
-### 🔀 5. Dynamic Curation & Shuffling Homepage
-* Shuffles and curates 5 dynamic categories (*Trending, Romantic, Sad, Party, For You*) upon opening the dashboard.
-* Shuffling of categories and tracks ensures a fresh layout on every visit.
+### 🧠 5. Neural Network Recommendation Engine (For You Mix)
+* **Multi-Layer Perceptron (MLP)**: A neural network built in pure Python (`backend/services/recommender.py`) dynamically trains user preference vectors.
+* **Personalized Scoring**: Evaluates the user's history and likes to score catalog tracks and recommend songs specifically for the user under the **For You Mix**.
+* **Smart Filtering & Exploration**: Excludes disliked tracks and balances exploitation (highly matched songs) with exploration (fresh new content).
 
-### 👥 6. Real-Time WebSocket Rooms
+### 📻 6. Context-Aware Autoplay
+* Automatically finds similar tracks for continuous queue-free play when a song ends.
+* **Strict Language & Emotion Alignment**: Candidates are filtered to match the original song's language (e.g., preventing Punjabi/Bihari tracks after a Hindi track) and prioritized by emotion matching (Romantic, Sad, Party) using title semantics.
+
+### 🎨 7. Elegant & Premium Redesigned UI
+* **Minimalist SVG Icons**: Replaced childish emojis on the navigation tabs with responsive, clean SVGs that transition smoothly on hover.
+* **Floating Side Navigation**: Implemented floating glassmorphic page-switch arrows pinned to the left and right viewport edges for immersive browsing.
+* **Seamless Search Dismissal**: Navigation via arrows automatically closes and cleanses any active searches, sliding back into the correct subpage view.
+
+### 👥 8. Real-Time WebSocket Rooms
 * **Low-Latency Sync**: Seamlessly syncs play, pause, seek, and track-load actions across all room participants.
 * **Live Chat Bubble**: Converse with everyone in the room. Shows unique color-coded user avatars.
 * **Listener list**: Shows live indicators of users active in the session.
@@ -66,6 +76,7 @@ vynce/
 │   ├── services/
 │   │   ├── jiosaavn.py      # JioSaavn API client (with proxy bypass header injection)
 │   │   ├── jamendo.py       # Jamendo API client fallback
+│   │   ├── recommender.py   # Neural Network recommender engine (MLP track scoring)
 │   │   └── room_manager.py  # WebSocket state sync engine
 │   └── static/              # Frontend Single-Page App (SPA)
 │       ├── index.html       # HTML layouts, overlays, and modals

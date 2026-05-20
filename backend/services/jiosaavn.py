@@ -174,78 +174,127 @@ async def get_song_details(song_id: str) -> dict:
         return {}
 
 
+ROMANTIC_KEYWORDS = [
+    "love", "dil", "pyar", "pyaar", "ishq", "mohabbat", "romantic", "dhadkan", "humsafar", "sanam", "tum", "romance", 
+    "sajne", "chaahat", "jaanam", "shiddat", "pehl", "jahan", "rabba", "khuda", "soniye", "heeriye", "ranjha", "jodi", 
+    "dhak", "nayan", "naina", "aankh", "mehboob", "janam", "ibadat", "aashiqui", "piya", "jiya", "saibo", "mann", "chahe",
+    "bana le", "rang", "aankhein", "baatein", "raatein", "sath", "saath", "jaan", "baho", "baahon", "chahe", "naseeb"
+]
+SAD_KEYWORDS = [
+    "sad", "dard", "tanhai", "judai", "rona", "khamoshi", "breakup", "broken", "bewafa", "zindagi", "dukh", "rua", 
+    "aansoo", "gum", "alvida", "judaiyaan", "faasle", "dhoke", "tuta", "toota", "akela", "asoon", "aansu", "rula", "tanha", "maula"
+]
+PARTY_KEYWORDS = [
+    "party", "dance", "club", "dj", "nach", "dhamaka", "hangover", "groove", "sharab", "nasha", "daaru", "daru", 
+    "thumka", "bhangra", "beat", "bass", "peene", "high", "suroor", "masti", "sharaabi", "duniya", "sharaab", "daru", "glass"
+]
+
+def detect_emotion(title: str) -> str:
+    t = title.lower()
+    for kw in SAD_KEYWORDS:
+        if kw in t:
+            return "sad"
+    for kw in PARTY_KEYWORDS:
+        if kw in t:
+            return "party"
+    for kw in ROMANTIC_KEYWORDS:
+        if kw in t:
+            return "romantic"
+    return "neutral"
+
+
 async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
-    """Get similar tracks for a song, with robust fallback to artist search and title filtering."""
+    """Get similar tracks for a song, preferring same language and same emotion."""
     import re
     jio = get_jio()
-    tracks = []
     
-    # Get details of current song to filter out same titles
+    # 1. Get original song details
     song_info = await get_song_details(song_id)
     original_title = song_info.get("title", "") if song_info else ""
+    original_language = song_info.get("language", "").strip().lower() if song_info else ""
+    original_emotion = detect_emotion(original_title) if original_title else "neutral"
 
     def is_same_song(title1: str, title2: str) -> bool:
         if not title1 or not title2:
             return False
         def get_base_title(t: str) -> str:
             t = t.lower()
-            # Remove feat/ft details
             t = re.split(r'\b(feat\.?|ft\.?)\b', t)[0]
-            # Split by - or | or :
             t = re.split(r'[-|:]', t)[0]
-            # Remove brackets/parentheses
             t = re.sub(r'[\(\[][^\)\]]*[\)\]]', '', t)
-            # Remove common version keywords
             t = re.sub(r'\b(remix|reprise|acoustic|lofi|unplugged|cover|version|sad|female|male|mashup|mix|lullaby|instrumental|slowed|reverb)\b', '', t)
-            # Normalize spaces and punctuation
             t = re.sub(r'[^a-z0-9\s]', '', t)
-            # Join words
             return "".join(t.split())
-        
         return get_base_title(title1) == get_base_title(title2)
 
-    # 1. Try native similar_songs
+    # 2. Gather a rich pool of candidates (native + artist search + trending fallback)
+    candidates = []
+    
+    # Native similar_songs
     try:
         results = await anyio.to_thread.run_sync(jio.similar_songs, song_id)
         if results:
-            parsed = [_parse_track(t) for t in results]
-            tracks = [
-                t for t in parsed
-                if t.get("id") != song_id and not is_same_song(original_title, t.get("title", ""))
-            ]
+            candidates.extend([_parse_track(t) for t in results])
     except Exception as e:
         logger.warning(f"JioSaavn similar_songs failed: {e}")
 
-    # 2. Fallback to artist-based search if empty
-    if not tracks:
+    # Primary artist fallback
+    if song_info and song_info.get("artist"):
         try:
-            if song_info and song_info.get("artist"):
-                artist = song_info["artist"]
-                # Split by commas or ampersands to get primary artist
-                primary_artist = artist.split(",")[0].split("&")[0].split("feat.")[0].strip()
-                if primary_artist and primary_artist != "Unknown Artist":
-                    search_res = await search_tracks(primary_artist, limit=limit + 5)
-                    tracks = [
-                        t for t in search_res.get("tracks", [])
-                        if t.get("id") != song_id and not is_same_song(original_title, t.get("title", ""))
-                    ]
+            artist = song_info["artist"]
+            primary_artist = artist.split(",")[0].split("&")[0].split("feat.")[0].strip()
+            if primary_artist and primary_artist != "Unknown Artist":
+                search_res = await search_tracks(primary_artist, limit=20)
+                candidates.extend(search_res.get("tracks", []))
         except Exception as e:
-            logger.error(f"JioSaavn similar fallback failed: {e}")
+            logger.error(f"JioSaavn similar artist fallback failed: {e}")
 
-    # 3. Fallback to trending tracks if still empty
-    if not tracks:
-        try:
-            trending = await get_trending(limit=limit + 5)
-            tracks = [
-                t for t in trending.get("tracks", [])
-                if t.get("id") != song_id and not is_same_song(original_title, t.get("title", ""))
-            ]
-        except Exception as e:
-            logger.error(f"JioSaavn trending fallback failed: {e}")
+    # Trending fallback
+    try:
+        trending = await get_trending(limit=20)
+        candidates.extend(trending.get("tracks", []))
+    except Exception as e:
+        logger.error(f"JioSaavn similar trending fallback failed: {e}")
+
+    # 3. Deduplicate candidates and exclude the playing song
+    seen_ids = {song_id}
+    unique_candidates = []
+    for t in candidates:
+        track_id = t.get("id")
+        if track_id and track_id not in seen_ids and not is_same_song(original_title, t.get("title", "")):
+            seen_ids.add(track_id)
+            unique_candidates.append(t)
+
+    # 4. Filter by Language and Score by Emotion
+    filtered_scored_tracks = []
+    for t in unique_candidates:
+        lang = t.get("language", "").strip().lower()
+        title = t.get("title", "")
+        
+        # Strict language matching: If original language and candidate language are known, they MUST match
+        if original_language and lang and lang != original_language:
+            continue
+            
+        candidate_emotion = detect_emotion(title)
+        
+        # Calculate matching score
+        score = 0
+        if candidate_emotion == original_emotion and original_emotion != "neutral":
+            score = 3
+        elif original_emotion == "neutral" or candidate_emotion == "neutral":
+            score = 2
+        else:
+            score = 1
+            
+        filtered_scored_tracks.append((score, t))
+
+    # 5. Sort by score (descending) and take top limit
+    filtered_scored_tracks.sort(key=lambda x: x[0], reverse=True)
+    final_tracks = [item[1] for item in filtered_scored_tracks]
 
     return {
-        "tracks": tracks[:limit],
-        "total": len(tracks[:limit]),
+        "tracks": final_tracks[:limit],
+        "total": len(final_tracks[:limit]),
         "source": "jiosaavn"
     }
 
