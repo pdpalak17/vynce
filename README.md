@@ -1,4 +1,4 @@
-# 🎵 Vynce — Listen Together, Vibe Together
+# Vynce — Listen Together, Vibe Together
 
 Vynce is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
 
@@ -11,7 +11,7 @@ Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page ap
 
 ---
 
-## ✨ Features
+## Features
 
 ### 🎙️ 1. Voice-Activated Search
 * **Voice Search Integration**: Search for songs hands-free using the built-in microphone button on the search bar.
@@ -57,7 +57,7 @@ Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page ap
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 vynce/
@@ -91,7 +91,7 @@ vynce/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 * **Backend**: FastAPI (Python) + WebSockets
 * **Database**: SQLite + SQLAlchemy (Async engine)
 * **Auth**: JWT tokens + bcrypt hashing
@@ -101,7 +101,7 @@ vynce/
 
 ---
 
-## 🚀 Local Setup Guide
+## Local Setup Guide
 
 ### 1. Prerequisites
 * Python 3.10+ installed on your computer.
@@ -130,7 +130,7 @@ Open [http://localhost:8000](http://localhost:8000) in your web browser. 🎉
 
 ---
 
-## 🌐 Deployment to Render.com
+## Deployment to Render.com
 1. Commit and push the code to your GitHub repository.
 2. Sign in to [Render.com](https://render.com) and create a **New Web Service**.
 3. Link your GitHub repository.
