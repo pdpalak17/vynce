@@ -233,6 +233,7 @@ function handleRoute() {
     case '': $('#landing-page').style.display = ''; break;
     case 'dashboard':
       $('#dashboard-page').style.display = '';
+      switchSubpage(state.currentSubpage || 'home');
       loadRooms(); loadHomeSections(); fetchUserLikedSongsList();
       break;
     case 'room':
@@ -826,18 +827,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if(name) { createRoom(name, isPublic); if(createRoomModal) createRoomModal.style.display = 'none'; }
   });
 
+  // Sub-navigation clicks
+  $$('.sub-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchSubpage(btn.dataset.subpage);
+    });
+  });
+  
+  // Sub-navigation arrows
+  $('#btn-sub-nav-prev')?.addEventListener('click', () => navigateSubpage(-1));
+  $('#btn-sub-nav-next')?.addEventListener('click', () => navigateSubpage(1));
+
   // Dashboard search
   const searchInput = $('#search-music-input');
   const searchHistoryDropdown = $('#search-history-dropdown');
   const debouncedDashSearch = debounce(async q => {
-    if(q.length < 2) { $('#search-results-section').style.display = 'none'; return; }
+    if(q.length < 2) { 
+      $('#search-results-section').style.display = 'none'; 
+      switchSubpage(state.currentSubpage || 'home');
+      return; 
+    }
     const tracks = await searchMusic(q);
     if(tracks && tracks.length) {
+      // Hide all subpages when search results are shown
+      $$('.subpage-container').forEach(el => el.style.display = 'none');
       $('#search-results-section').style.display = '';
       renderTrackCards(tracks, '#search-results');
       saveSearchToHistory(q);
     }
   }, 400);
+
+  // Close search action
+  $('#btn-close-search')?.addEventListener('click', () => {
+    $('#search-results-section').style.display = 'none';
+    if (searchInput) searchInput.value = '';
+    switchSubpage(state.currentSubpage || 'home');
+  });
+
   if(searchInput) {
     searchInput.addEventListener('input', e => {
       const val = e.target.value;
@@ -847,6 +873,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (history.length > 0 && searchHistoryDropdown) {
           searchHistoryDropdown.style.display = 'block';
         }
+        $('#search-results-section').style.display = 'none';
+        switchSubpage(state.currentSubpage || 'home');
       } else {
         if (searchHistoryDropdown) searchHistoryDropdown.style.display = 'none';
         debouncedDashSearch(val);
@@ -907,6 +935,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const tracks = await searchMusic(genre);
       if(tracks) renderTrackCards(tracks, '#genre-results');
     });
+  });
+
+  // Close genre section
+  $('#btn-close-genre')?.addEventListener('click', () => {
+    $('#genre-results-section').style.display = 'none';
+    $$('.genre-chip').forEach(c => c.classList.remove('active'));
   });
 
   // Room
@@ -1373,12 +1407,60 @@ function renderExpandedQueue() {
   });
 }
 
+const subpages = ['home', 'trending', 'romantic', 'sad', 'party', 'rooms'];
+
+function switchSubpage(page) {
+  if (!subpages.includes(page)) return;
+  state.currentSubpage = page;
+  
+  // Hide search results if switching subpages
+  const searchResultsSec = $('#search-results-section');
+  if (searchResultsSec) searchResultsSec.style.display = 'none';
+  const searchInput = $('#search-music-input');
+  if (searchInput) searchInput.value = '';
+
+  subpages.forEach(p => {
+    const el = $(`#subpage-${p}`);
+    if (el) {
+      el.style.display = p === page ? 'block' : 'none';
+      if (p === page) el.classList.add('active');
+      else el.classList.remove('active');
+    }
+  });
+
+  $$('.sub-nav-btn').forEach(btn => {
+    if (btn.dataset.subpage === page) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function navigateSubpage(direction) {
+  const currentIndex = subpages.indexOf(state.currentSubpage || 'home');
+  let nextIndex = currentIndex + direction;
+  if (nextIndex < 0) nextIndex = subpages.length - 1;
+  if (nextIndex >= subpages.length) nextIndex = 0;
+  switchSubpage(subpages[nextIndex]);
+}
+
 // Homepage layout loading
 async function loadHomeSections() {
-  const container = $('#dynamic-home-sections');
-  if (!container) return;
-  container.innerHTML = '<p class="empty-hint" style="padding: 20px;">Shuffling music & loading homepage...</p>';
+  const recentlyPlayedSection = $('#section-recently-played');
+  const forYouSection = $('#section-for-you');
+  const trendingSection = $('#section-trending');
+  const romanticSection = $('#section-romantic');
+  const sadSection = $('#section-sad');
+  const partySection = $('#section-party');
   
+  if (recentlyPlayedSection) recentlyPlayedSection.innerHTML = '';
+  if (forYouSection) forYouSection.innerHTML = '';
+  if (trendingSection) trendingSection.innerHTML = '';
+  if (romanticSection) romanticSection.innerHTML = '';
+  if (sadSection) sadSection.innerHTML = '';
+  if (partySection) partySection.innerHTML = '';
+
   // Fetch history and homepage categories concurrently
   const [historyData, data] = await Promise.all([
     api.get('/api/music/history?limit=24').catch(() => []),
@@ -1386,11 +1468,9 @@ async function loadHomeSections() {
   ]);
   
   if (!data) return;
-  
-  container.innerHTML = '';
 
-  // Prepend Recently Played if user has history
-  if (historyData && historyData.length) {
+  // 1. Prepend Recently Played if user has history
+  if (historyData && historyData.length && recentlyPlayedSection) {
     const seenIds = new Set();
     const recentTracks = [];
     historyData.forEach(item => {
@@ -1409,7 +1489,6 @@ async function loadHomeSections() {
     });
 
     if (recentTracks.length > 0) {
-      // Limit to max 12 items for clean layout
       const displayTracks = recentTracks.slice(0, 12);
       
       const secEl = document.createElement('section');
@@ -1424,26 +1503,44 @@ async function loadHomeSections() {
       gridEl.className = 'tracks-grid';
       secEl.appendChild(gridEl);
       
-      container.appendChild(secEl);
+      recentlyPlayedSection.appendChild(secEl);
       renderTracksInGrid(displayTracks, gridEl);
     }
   }
   
+  // 2. Load the other sections
   data.forEach(section => {
-    const secEl = document.createElement('section');
-    secEl.className = 'dash-section';
+    let targetContainer = null;
+    let secTitle = section.title;
     
-    const titleEl = document.createElement('h2');
-    titleEl.className = 'section-title';
-    titleEl.textContent = section.title;
-    secEl.appendChild(titleEl);
+    if (section.title.includes('Trending')) {
+      targetContainer = trendingSection;
+    } else if (section.title.includes('Romantic')) {
+      targetContainer = romanticSection;
+    } else if (section.title.includes('Sad')) {
+      targetContainer = sadSection;
+    } else if (section.title.includes('Party')) {
+      targetContainer = partySection;
+    } else if (section.title.includes('For You')) {
+      targetContainer = forYouSection;
+    }
     
-    const gridEl = document.createElement('div');
-    gridEl.className = 'tracks-grid';
-    secEl.appendChild(gridEl);
-    
-    container.appendChild(secEl);
-    renderTracksInGrid(section.tracks || [], gridEl);
+    if (targetContainer) {
+      const secEl = document.createElement('section');
+      secEl.className = 'dash-section';
+      
+      const titleEl = document.createElement('h2');
+      titleEl.className = 'section-title';
+      titleEl.textContent = secTitle;
+      secEl.appendChild(titleEl);
+      
+      const gridEl = document.createElement('div');
+      gridEl.className = 'tracks-grid';
+      secEl.appendChild(gridEl);
+      
+      targetContainer.appendChild(secEl);
+      renderTracksInGrid(section.tracks || [], gridEl);
+    }
   });
 }
 
