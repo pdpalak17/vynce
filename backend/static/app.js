@@ -449,6 +449,10 @@ function updateLC(c) { const el = $('#listener-count-display'); if(el && c!=null
 /* ═══════ AUDIO PLAYER ═══════ */
 function loadTrack(track, startAt = 0) {
   if (!track?.stream_url) return;
+  if (state.currentTrack && state.currentTrack.id !== track.id) {
+    state.history.push(state.currentTrack);
+    if (state.history.length > 50) state.history.shift();
+  }
   state.currentTrack = track;
   try { audio.src = track.stream_url; audio.currentTime = startAt; } catch(e) { showToast('Could not load track', 'error'); return; }
   const t = $('#player-track-title'); if(t) t.textContent = track.title || 'Unknown';
@@ -479,9 +483,24 @@ async function playNext() {
     if (state.currentTrack) {
       showToast('Autoplay: Finding next similar song...', 'info');
       try {
-        const res = await api.get(`/api/music/song/${state.currentTrack.id}/similar?limit=5`);
+        const res = await api.get(`/api/music/song/${state.currentTrack.id}/similar?limit=15`);
         if (res && res.tracks && res.tracks.length) {
-          const next = res.tracks[0];
+          // Exclude tracks in local history (last 15 tracks played) and current track
+          const recentlyPlayed = new Set(state.history.slice(-15).map(t => t.id));
+          recentlyPlayed.add(state.currentTrack.id);
+          
+          const pool = res.tracks.filter(t => !recentlyPlayed.has(t.id));
+          
+          let next;
+          if (pool.length > 0) {
+            // Pick the first fresh track
+            next = pool[0];
+          } else {
+            // Fallback: if all similar songs were played recently, pick a random one from similar list to break loop
+            const randIdx = Math.floor(Math.random() * res.tracks.length);
+            next = res.tracks[randIdx];
+          }
+          
           playTrack(next);
           return;
         }
@@ -495,10 +514,6 @@ async function playNext() {
   const next = state.queue.shift();
   if(state.currentRoom) sendWS('play_track', {track:next});
   else {
-    if (state.currentTrack && state.currentTrack.id !== next.id) {
-      state.history.push(state.currentTrack);
-      if (state.history.length > 50) state.history.shift();
-    }
     loadTrack(next);
     audio.play().catch(()=>{});
     state.isPlaying = true;
@@ -733,10 +748,6 @@ function renderSearchResultsList(tracks, sel) {
 function playTrack(track) {
   if(state.currentRoom) sendWS('play_track', {track});
   else {
-    if (state.currentTrack && state.currentTrack.id !== track.id) {
-      state.history.push(state.currentTrack);
-      if (state.history.length > 50) state.history.shift();
-    }
     loadTrack(track);
     audio.play().catch(()=>{});
     state.isPlaying = true;
