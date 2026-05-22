@@ -15,7 +15,7 @@ from ..services.room_manager import room_manager
 router = APIRouter(prefix="/api/rooms", tags=["rooms"])
 
 
-@router.post("/", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_room(
     payload: RoomCreate,
     user: User = Depends(get_current_user),
@@ -39,7 +39,7 @@ async def create_room(
     return resp
 
 
-@router.get("/", response_model=list[RoomResponse])
+@router.get("", response_model=list[RoomResponse])
 async def list_rooms(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -74,6 +74,7 @@ async def get_room(
     db: AsyncSession = Depends(get_db),
 ):
     """Get room details by invite code."""
+    code = code.upper()
     result = await db.execute(select(Room).where(Room.code == code))
     room = result.scalar_one_or_none()
 

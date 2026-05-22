@@ -16,7 +16,7 @@ from ..schemas import PlaylistCreate, PlaylistResponse, PlaylistUpdate
 router = APIRouter(prefix="/api/playlists", tags=["playlists"])
 
 
-@router.get("/", response_model=list[PlaylistResponse])
+@router.get("", response_model=list[PlaylistResponse])
 async def list_playlists(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -30,7 +30,7 @@ async def list_playlists(
     return [PlaylistResponse.model_validate(p) for p in result.scalars().all()]
 
 
-@router.post("/", response_model=PlaylistResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PlaylistResponse, status_code=status.HTTP_201_CREATED)
 async def create_playlist(
     payload: PlaylistCreate,
     user: User = Depends(get_current_user),

@@ -77,6 +77,7 @@ async def websocket_endpoint(
     token: str = Query(default=""),
 ):
     """WebSocket endpoint for real-time room synchronization."""
+    room_code = room_code.upper()
     # Authenticate via token query param
     payload = decode_token(token)
     if payload is None:
