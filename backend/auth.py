@@ -3,9 +3,12 @@ Vynce Auth — JWT token creation/verification and password hashing.
 """
 
 from datetime import datetime, timedelta
+import logging
+import smtplib
 from typing import Optional
 
 import bcrypt
+from email_validator import validate_email, EmailNotValidError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -15,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from . import config
 from .database import get_db
 from .models import User
+
+logger = logging.getLogger(__name__)
+
 
 # Bearer token scheme
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -103,3 +109,35 @@ async def get_optional_user(
         return await get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+def verify_email_existence(email: str) -> tuple[bool, str]:
+    """
+    Validates syntax and domain deliverability for all emails.
+    If the email is a Gmail address, also verifies mailbox existence via SMTP.
+    Returns (is_valid, error_message).
+    """
+    email = email.strip()
+    try:
+        valid = validate_email(email, check_deliverability=True)
+        email = valid.normalized
+    except EmailNotValidError as e:
+        return False, f"Email domain validation failed: {str(e)}"
+    
+    parts = email.split("@")
+    if len(parts) == 2 and parts[1].lower() == "gmail.com":
+        mx_server = "gmail-smtp-in.l.google.com"
+        try:
+            server = smtplib.SMTP(mx_server, 25, timeout=5)
+            server.ehlo("gmail.com")
+            server.mail("test@gmail.com")
+            code, message = server.rcpt(email)
+            server.quit()
+            
+            if code == 550:
+                return False, "The Gmail address does not exist."
+        except Exception as e:
+            logger.warning(f"SMTP check skipped or failed for {email}: {e}")
+            
+    return True, ""
+

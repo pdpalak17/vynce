@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import create_access_token, get_current_user, hash_password, verify_password
+from ..auth import create_access_token, get_current_user, hash_password, verify_password, verify_email_existence
 from ..database import get_db
 from ..models import User
 from ..schemas import TokenResponse, UserLogin, UserRegister, UserResponse
@@ -17,6 +17,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     """Create a new user account."""
+    # Verify email exists and is valid
+    is_valid, err_msg = verify_email_existence(payload.email)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg,
+        )
+
     # Check if email already exists
     result = await db.execute(select(User).where(User.email == payload.email))
     if result.scalar_one_or_none():
@@ -67,6 +75,14 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        )
+
+    # Verify that the registered email address exists/is valid (blocks legacy fake accounts)
+    is_valid, err_msg = verify_email_existence(user.email)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Account blocked: {err_msg}",
         )
 
     token = create_access_token(user.id, user.username)
