@@ -86,6 +86,7 @@ class RoomManager:
     def __init__(self):
         self.rooms: Dict[str, RoomState] = {}
         self._sync_tasks: Dict[str, asyncio.Task] = {}
+        self._filling_rooms = set()
 
     def get_or_create_room(self, code: str, name: str = "", creator_id: str = "") -> RoomState:
         """Get existing room or create a new one."""
@@ -96,6 +97,98 @@ class RoomManager:
     def get_room(self, code: str) -> Optional[RoomState]:
         """Get room by code, or None."""
         return self.rooms.get(code)
+
+    async def ensure_room_queue_filled(self, room: RoomState):
+        """Proactively pre-fill the room's queue if it falls below 5 tracks."""
+        if room.code in self._filling_rooms:
+            return
+        if len(room.queue) >= 5:
+            return
+
+        self._filling_rooms.add(room.code)
+        try:
+            needed = 5 - len(room.queue)
+            
+            # Determine seed track
+            seed_track_id = None
+            if room.queue:
+                seed_track_id = room.queue[-1].get("id")
+            elif room.current_track:
+                seed_track_id = room.current_track.get("id")
+
+            tracks_to_add = []
+            
+            # Try to get similar tracks
+            if seed_track_id:
+                try:
+                    from ..services.jiosaavn import get_similar_tracks
+                    res = await get_similar_tracks(seed_track_id, limit=needed + 10)
+                    sim_tracks = res.get("tracks", [])
+                    
+                    existing_ids = {t.get("id") for t in room.queue if t.get("id")}
+                    if room.current_track and room.current_track.get("id"):
+                        existing_ids.add(room.current_track.get("id"))
+                    
+                    for t in sim_tracks:
+                        tid = t.get("id")
+                        if tid and tid not in existing_ids:
+                            tracks_to_add.append(t)
+                            existing_ids.add(tid)
+                            if len(tracks_to_add) >= needed:
+                                break
+                except Exception as e:
+                    logger.error(f"Error fetching similar tracks for room {room.code}: {e}")
+
+            # Fallback: get trending tracks
+            if len(tracks_to_add) < needed:
+                try:
+                    from ..services.jiosaavn import get_trending
+                    res = await get_trending(limit=15)
+                    trending_tracks = res.get("tracks", [])
+                    
+                    existing_ids = {t.get("id") for t in room.queue if t.get("id")}
+                    if room.current_track and room.current_track.get("id"):
+                        existing_ids.add(room.current_track.get("id"))
+                    for t in tracks_to_add:
+                        if t.get("id"):
+                            existing_ids.add(t.get("id"))
+                            
+                    for t in trending_tracks:
+                        tid = t.get("id")
+                        if tid and tid not in existing_ids:
+                            tracks_to_add.append(t)
+                            existing_ids.add(tid)
+                            if len(tracks_to_add) >= needed:
+                                break
+                except Exception as e:
+                    logger.error(f"Error fetching trending tracks for room {room.code}: {e}")
+
+            if tracks_to_add:
+                room.queue.extend(tracks_to_add)
+                await self._broadcast(room, {
+                    "type": "queue_update",
+                    "data": {"queue": room.queue},
+                })
+            
+            # If there is no current track playing/loaded, set the first one and start playing
+            if not room.current_track and room.queue:
+                next_track = room.queue.pop(0)
+                room.set_track(next_track)
+                room.is_playing = True
+                await self._broadcast(room, {
+                    "type": "play_track",
+                    "data": {
+                        "track": next_track,
+                        "position": 0,
+                        "user_id": "system",
+                    },
+                })
+                await self._broadcast(room, {
+                    "type": "queue_update",
+                    "data": {"queue": room.queue},
+                })
+        finally:
+            self._filling_rooms.discard(room.code)
 
     async def add_user(self, code: str, user_id: str, username: str, websocket: WebSocket, avatar_url: str = ""):
         """Add a user to a room and notify everyone."""
@@ -110,6 +203,10 @@ class RoomManager:
             avatar_url=avatar_url,
         )
         room.users[user_id] = room_user
+
+        # Ensure queue is populated if there is no track playing
+        if not room.current_track:
+            await self.ensure_room_queue_filled(room)
 
         # Send current room state to the joining user
         await self._send(websocket, {
@@ -193,6 +290,7 @@ class RoomManager:
                         "user_id": user_id,
                     },
                 })
+                await self.ensure_room_queue_filled(room)
 
         elif msg_type == "pause":
             room.pause()
@@ -224,8 +322,13 @@ class RoomManager:
                     "type": "queue_update",
                     "data": {"queue": room.queue},
                 })
+                await self.ensure_room_queue_filled(room)
 
         elif msg_type == "skip":
+            # Ensure queue is filled first if it's empty
+            if not room.queue:
+                await self.ensure_room_queue_filled(room)
+
             # Play next track in queue
             if room.queue:
                 next_track = room.queue.pop(0)
@@ -242,6 +345,7 @@ class RoomManager:
                     "type": "queue_update",
                     "data": {"queue": room.queue},
                 })
+                await self.ensure_room_queue_filled(room)
             else:
                 room.pause()
                 room.current_track = None
@@ -269,6 +373,46 @@ class RoomManager:
                     "type": "queue_update",
                     "data": {"queue": room.queue},
                 })
+                await self.ensure_room_queue_filled(room)
+            else:
+                # Restart current track
+                if room.current_track:
+                    room.seek(0.0)
+                    await self._broadcast(room, {
+                        "type": "seek",
+                        "data": {"position": 0.0},
+                    })
+
+        elif msg_type == "chat_message":
+            text = data.get("text", "").strip()
+            if text:
+                user = room.users.get(user_id)
+                chat_msg = {
+                    "user_id": user_id,
+                    "username": user.username if user else "Unknown",
+                    "avatar_url": user.avatar_url if user else "",
+                    "text": text,
+                    "timestamp": time.time(),
+                }
+                room.chat_history.append(chat_msg)
+                # Keep only last 200 messages
+                if len(room.chat_history) > 200:
+                    room.chat_history = room.chat_history[-200:]
+
+                await self._broadcast(room, {
+                    "type": "chat_message",
+                    "data": chat_msg,
+                })
+
+        elif msg_type == "remove_from_queue":
+            index = data.get("index")
+            if index is not None and 0 <= index < len(room.queue):
+                room.queue.pop(index)
+                await self._broadcast(room, {
+                    "type": "queue_update",
+                    "data": {"queue": room.queue},
+                })
+                await self.ensure_room_queue_filled(room)
             else:
                 # Restart current track
                 if room.current_track:
@@ -313,6 +457,11 @@ class RoomManager:
         try:
             while code in self.rooms:
                 room = self.rooms[code]
+                
+                # Proactively ensure the queue is filled if it drops below 5
+                if len(room.queue) < 5:
+                    await self.ensure_room_queue_filled(room)
+
                 if room.is_playing and room.current_track:
                     position = room.get_current_position()
                     duration = room.current_track.get("duration", 0)
@@ -334,8 +483,9 @@ class RoomManager:
                                 "type": "queue_update",
                                 "data": {"queue": room.queue},
                             })
+                            await self.ensure_room_queue_filled(room)
                         else:
-                            # Autoplay next similar song
+                            # Autoplay next similar song fallback
                             try:
                                 from ..services.jiosaavn import get_similar_tracks
                                 current_id = room.current_track.get("id")
@@ -354,6 +504,7 @@ class RoomManager:
                                                 "user_id": "system",
                                             },
                                         })
+                                        await self.ensure_room_queue_filled(room)
                                         continue
                             except Exception as ex:
                                 logger.error(f"Autoplay similar song error in room {code}: {ex}")
