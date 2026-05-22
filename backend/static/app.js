@@ -898,6 +898,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if(name) { createRoom(name, isPublic); if(createRoomModal) createRoomModal.style.display = 'none'; }
   });
 
+  // Join room
+  const joinRoomModal = $('#join-room-modal');
+  $('#btn-open-join-room')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'flex'; });
+  $('#btn-join-room-close')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'none'; });
+  $('#join-room-form')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const code = $('#room-code-input').value.trim();
+    if(code) {
+      if(joinRoomModal) joinRoomModal.style.display = 'none';
+      $('#room-code-input').value = '';
+      navigateTo(`#/room/${code}`);
+    }
+  });
+
   // Sub-navigation clicks
   $$('.sub-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {

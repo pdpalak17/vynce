@@ -173,6 +173,7 @@
         </div>
       </div>
       <div class="dash-header__right">
+        <button id="btn-open-join-room" class="btn btn-ghost btn-sm" style="margin-right: 8px;">Join with Code</button>
         <button id="btn-open-create-room" class="btn btn-primary btn-sm">+ Create Room</button>
         <div class="user-menu">
           <button id="btn-user-menu-toggle" class="user-avatar-btn" aria-expanded="false">
@@ -330,6 +331,23 @@
           <div class="modal-actions">
             <button type="button" id="btn-create-room-close" class="btn btn-ghost">Cancel</button>
             <button type="submit" class="btn btn-primary">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="join-room-modal" class="modal-overlay" style="display:none;">
+      <div class="mini-modal">
+        <h3>Join a Room</h3>
+        <form id="join-room-form">
+          <div class="input-group">
+            <label for="room-code-input">Room Code</label>
+            <input type="text" id="room-code-input" placeholder="e.g. 77A6FE" required autocomplete="off" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="btn-join-room-close" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-primary">Join</button>
           </div>
         </form>
       </div>
