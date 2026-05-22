@@ -36,6 +36,7 @@
         <span>Vynce</span>
       </div>
       <div class="landing-nav__actions">
+        <button id="btn-nav-join-room" class="btn btn-ghost">Join with Code</button>
         <button id="btn-nav-login" class="btn btn-ghost">Login</button>
         <button id="btn-nav-signup" class="btn btn-primary">Sign Up Free</button>
       </div>
@@ -47,6 +48,7 @@
       <p class="landing-hero__subtitle">Stream Bollywood hits, create rooms, and jam with friends in perfect sync. Arijit Singh, Pritam, AR Rahman — all free.</p>
       <div class="landing-hero__actions">
         <button id="btn-hero-create-room" class="btn btn-primary btn-lg">Create a Room</button>
+        <button id="btn-hero-join-room" class="btn btn-ghost btn-lg" style="border: 1px solid var(--border-hover);">Join with Code</button>
         <button id="btn-hero-explore" class="btn btn-ghost btn-lg">Explore Music →</button>
       </div>
     </section>
@@ -134,6 +136,44 @@
           <p class="auth-switch">Already have an account? <button type="button" id="btn-switch-to-login" class="link-btn">Log in</button></p>
         </form>
       </div>
+    </div>
+  </div>
+
+  <!-- Create Room Modal -->
+  <div id="create-room-modal" class="modal-overlay" style="display:none;">
+    <div class="mini-modal">
+      <h3>Create a Room</h3>
+      <form id="create-room-form">
+        <div class="input-group">
+          <label for="room-name-input">Room Name</label>
+          <input type="text" id="room-name-input" placeholder="e.g. Late Night Bollywood" required />
+        </div>
+        <div class="toggle-row">
+          <label for="room-visibility-toggle">Public Room</label>
+          <input type="checkbox" id="room-visibility-toggle" checked />
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="btn-create-room-close" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Join Room Modal -->
+  <div id="join-room-modal" class="modal-overlay" style="display:none;">
+    <div class="mini-modal">
+      <h3>Join a Room</h3>
+      <form id="join-room-form">
+        <div class="input-group">
+          <label for="room-code-input">Room Code</label>
+          <input type="text" id="room-code-input" placeholder="e.g. 77A6FE" required autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="btn-join-room-close" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Join</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -315,43 +355,6 @@
       </div>
     </main>
 
-    <!-- Create Room Modal -->
-    <div id="create-room-modal" class="modal-overlay" style="display:none;">
-      <div class="mini-modal">
-        <h3>Create a Room</h3>
-        <form id="create-room-form">
-          <div class="input-group">
-            <label for="room-name-input">Room Name</label>
-            <input type="text" id="room-name-input" placeholder="e.g. Late Night Bollywood" required />
-          </div>
-          <div class="toggle-row">
-            <label for="room-visibility-toggle">Public Room</label>
-            <input type="checkbox" id="room-visibility-toggle" checked />
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="btn-create-room-close" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Join Room Modal -->
-    <div id="join-room-modal" class="modal-overlay" style="display:none;">
-      <div class="mini-modal">
-        <h3>Join a Room</h3>
-        <form id="join-room-form">
-          <div class="input-group">
-            <label for="room-code-input">Room Code</label>
-            <input type="text" id="room-code-input" placeholder="e.g. 77A6FE" required autocomplete="off" />
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="btn-join-room-close" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary">Join</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 
   <!-- ═══════════ 4. ROOM PAGE ═══════════ -->

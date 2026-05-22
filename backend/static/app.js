@@ -223,6 +223,10 @@ function handleRoute() {
   const [route, param] = hash.replace('#/', '').split('/');
 
   if (['dashboard','room','profile'].includes(route) && !state.token) {
+    if (route === 'room' && param) {
+      sessionStorage.setItem('vynce_pending_room', param.toUpperCase());
+      showToast('Please log in or register to join the room', 'info');
+    }
     showAuthModal('login'); navigateTo('#/'); return;
   }
   if (route === '' && state.token) {
@@ -296,7 +300,13 @@ async function handleLogin(e) {
   
   hideAuthModal();
   showToast(`Welcome back, ${state.user?.username || 'friend'}!`, 'success');
-  navigateTo('#/dashboard');
+  const pendingRoom = sessionStorage.getItem('vynce_pending_room');
+  if (pendingRoom) {
+    sessionStorage.removeItem('vynce_pending_room');
+    navigateTo(`#/room/${pendingRoom}`);
+  } else {
+    navigateTo('#/dashboard');
+  }
 }
 
 async function handleRegister(e) {
@@ -321,7 +331,13 @@ async function handleRegister(e) {
   
   hideAuthModal();
   showToast('Welcome to Vynce!', 'success');
-  navigateTo('#/dashboard');
+  const pendingRoom = sessionStorage.getItem('vynce_pending_room');
+  if (pendingRoom) {
+    sessionStorage.removeItem('vynce_pending_room');
+    navigateTo(`#/room/${pendingRoom}`);
+  } else {
+    navigateTo('#/dashboard');
+  }
 }
 
 async function loadCurrentUser() {
@@ -337,6 +353,7 @@ function logout() {
   updatePlaybackUI();
   localStorage.removeItem('vynce_token');
   sessionStorage.removeItem('vynce_token');
+  sessionStorage.removeItem('vynce_pending_room');
   if (state.ws) { state.ws.close(); state.ws = null; }
   navigateTo('#/');
 }
@@ -901,14 +918,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Join room
   const joinRoomModal = $('#join-room-modal');
   $('#btn-open-join-room')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'flex'; });
+  $('#btn-nav-join-room')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'flex'; });
+  $('#btn-hero-join-room')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'flex'; });
   $('#btn-join-room-close')?.addEventListener('click', () => { if(joinRoomModal) joinRoomModal.style.display = 'none'; });
   $('#join-room-form')?.addEventListener('submit', e => {
     e.preventDefault();
-    const code = $('#room-code-input').value.trim();
+    const code = $('#room-code-input').value.trim().toUpperCase();
     if(code) {
       if(joinRoomModal) joinRoomModal.style.display = 'none';
       $('#room-code-input').value = '';
-      navigateTo(`#/room/${code}`);
+      if (state.token) {
+        navigateTo(`#/room/${code}`);
+      } else {
+        sessionStorage.setItem('vynce_pending_room', code);
+        showToast('Please log in or register to join the room', 'info');
+        showAuthModal('login');
+      }
     }
   });
 
