@@ -348,6 +348,8 @@ async function loadCurrentUser() {
 function logout() {
   state.token = null; state.user = null;
   state.isPlaying = false;
+  state.currentTrack = null;
+  state.queue = [];
   audio.pause();
   audio.src = '';
   updatePlaybackUI();
@@ -606,7 +608,11 @@ audio.addEventListener('timeupdate', () => {
   }
 });
 audio.addEventListener('ended', () => { state.isPlaying = false; updatePlaybackUI(); playNext(); });
-audio.addEventListener('error', () => { showToast('Playback error — skipping', 'error'); playNext(); });
+audio.addEventListener('error', () => {
+  if (!state.isPlaying || !audio.src || audio.src === window.location.href) return;
+  showToast('Playback error — skipping', 'error');
+  playNext();
+});
 
 function updatePlaybackUI() {
   const btn = $('#btn-play-pause'); if(!btn) return;
