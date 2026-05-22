@@ -18,6 +18,80 @@ const state = {
   likedSongs: new Set(),
 };
 
+let isFillingQueue = false;
+
+async function ensureQueueFilled() {
+  if (state.currentRoom) return;
+  if (isFillingQueue) return;
+  if (state.queue.length >= 5) return;
+
+  isFillingQueue = true;
+  try {
+    const needed = 5 - state.queue.length;
+    let seedTrack = null;
+    if (state.queue.length > 0) {
+      seedTrack = state.queue[state.queue.length - 1];
+    } else if (state.currentTrack) {
+      seedTrack = state.currentTrack;
+    }
+
+    const existingIds = new Set();
+    state.queue.forEach(t => { if (t && t.id) existingIds.add(t.id); });
+    if (state.currentTrack && state.currentTrack.id) {
+      existingIds.add(state.currentTrack.id);
+    }
+    const recentHistory = state.history.slice(-15);
+    recentHistory.forEach(t => { if (t && t.id) existingIds.add(t.id); });
+
+    let fetchedTracks = [];
+    if (seedTrack && seedTrack.id) {
+      try {
+        const res = await api.get(`/api/music/song/${seedTrack.id}/similar?limit=15`);
+        if (res && res.tracks) {
+          fetchedTracks = res.tracks;
+        }
+      } catch (err) {
+        console.error('[Autoplay] Error fetching similar tracks:', err);
+      }
+    }
+
+    let pool = fetchedTracks.filter(t => t && t.id && !existingIds.has(t.id));
+
+    if (pool.length < needed) {
+      try {
+        const trendingRes = await api.get('/api/music/trending?limit=15');
+        if (trendingRes && trendingRes.tracks) {
+          const trendingPool = trendingRes.tracks.filter(t => t && t.id && !existingIds.has(t.id) && !pool.some(p => p.id === t.id));
+          pool = pool.concat(trendingPool);
+        }
+      } catch (err) {
+        console.error('[Autoplay] Error fetching trending tracks:', err);
+      }
+    }
+
+    const tracksToAdd = pool.slice(0, needed);
+    if (tracksToAdd.length > 0) {
+      state.queue = state.queue.concat(tracksToAdd);
+      renderQueue();
+      renderExpandedQueue();
+    }
+
+    if (!state.currentTrack && state.queue.length > 0) {
+      const next = state.queue.shift();
+      loadTrack(next);
+      audio.play().catch(()=>{});
+      state.isPlaying = true;
+      updatePlaybackUI();
+      renderQueue();
+      renderExpandedQueue();
+    }
+  } catch (err) {
+    console.error('[Autoplay] Error in ensureQueueFilled:', err);
+  } finally {
+    isFillingQueue = false;
+  }
+}
+
 /* ═══════ AUDIO & HIGH-FIDELITY PROCESSING ═══════ */
 const audio = new Audio();
 audio.crossOrigin = 'anonymous';
@@ -253,6 +327,7 @@ function handleRoute() {
       $('#dashboard-page').style.display = '';
       switchSubpage(state.currentSubpage || 'home');
       loadRooms(); loadHomeSections(); fetchUserLikedSongsList();
+      ensureQueueFilled();
       break;
     case 'room':
       if (param) { $('#room-page').style.display = ''; enterRoom(param); }
@@ -522,46 +597,35 @@ function seekTo(pos) { if(!audio.src) return; audio.currentTime = pos; if(state.
 function setVolume(v) { state.volume = Math.max(0,Math.min(1,v)); audio.volume = state.volume; localStorage.setItem('vynce_volume', state.volume); updateVolumeUI(); }
 
 async function playNext() {
-  if(!state.queue.length) {
-    if (state.currentTrack) {
-      try {
-        const res = await api.get(`/api/music/song/${state.currentTrack.id}/similar?limit=15`);
-        if (res && res.tracks && res.tracks.length) {
-          // Exclude tracks in local history (last 15 tracks played) and current track
-          const recentlyPlayed = new Set(state.history.slice(-15).map(t => t.id));
-          recentlyPlayed.add(state.currentTrack.id);
-          
-          const pool = res.tracks.filter(t => !recentlyPlayed.has(t.id));
-          
-          let next;
-          if (pool.length > 0) {
-            // Pick the first fresh track
-            next = pool[0];
-          } else {
-            // Fallback: if all similar songs were played recently, pick a random one from similar list to break loop
-            const randIdx = Math.floor(Math.random() * res.tracks.length);
-            next = res.tracks[randIdx];
-          }
-          
-          playTrack(next);
-          return;
-        }
-      } catch (err) {
-        console.error('[Autoplay] Error fetching similar tracks:', err);
-      }
+  if (state.currentRoom) {
+    if (!state.queue.length) {
+      showToast('Queue is empty', 'info');
+      return;
     }
+    const next = state.queue.shift();
+    sendWS('play_track', {track:next});
+    renderQueue();
+    return;
+  }
+  
+  if (!state.queue.length) {
+    await ensureQueueFilled();
+  }
+  
+  if (!state.queue.length) {
     showToast('Queue is empty', 'info');
     return;
   }
+  
   const next = state.queue.shift();
-  if(state.currentRoom) sendWS('play_track', {track:next});
-  else {
-    loadTrack(next);
-    audio.play().catch(()=>{});
-    state.isPlaying = true;
-    updatePlaybackUI();
-  }
+  loadTrack(next);
+  audio.play().catch(()=>{});
+  state.isPlaying = true;
+  updatePlaybackUI();
   renderQueue();
+  renderExpandedQueue();
+  
+  ensureQueueFilled();
 }
 
 async function playPrev() {
@@ -581,11 +645,13 @@ async function playPrev() {
   if (state.currentTrack) {
     state.queue.unshift(state.currentTrack);
     renderQueue();
+    renderExpandedQueue();
   }
   loadTrack(prev);
   audio.play().catch(()=>{});
   state.isPlaying = true;
   updatePlaybackUI();
+  ensureQueueFilled();
 }
 
 let lastSavedTime = 0;
@@ -834,6 +900,7 @@ function playTrack(track) {
     audio.play().catch(()=>{});
     state.isPlaying = true;
     updatePlaybackUI();
+    ensureQueueFilled();
   }
 }
 
@@ -841,6 +908,7 @@ function addToQueue(track) {
   state.queue.push(track); renderQueue();
   if(state.currentRoom) sendWS('queue_update', {queue:state.queue});
   showToast(`Added "${track.title}" to queue`, 'success');
+  ensureQueueFilled();
 }
 
 function removeFromQueue(index) {
@@ -852,6 +920,7 @@ function removeFromQueue(index) {
       renderQueue();
       renderExpandedQueue();
       showToast(`Removed "${removed.title}" from queue`, 'info');
+      ensureQueueFilled();
     }
   }
 }
@@ -1219,6 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const track = JSON.parse(savedTrack);
       if (track && track.stream_url) {
         loadTrack(track, savedTime, true);
+        ensureQueueFilled();
         setTimeout(() => {
           const dur = audio.duration || track.duration || 0;
           if (dur) {
