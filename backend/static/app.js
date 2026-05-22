@@ -1061,11 +1061,11 @@ document.addEventListener('DOMContentLoaded', () => {
     else if(e.code === 'ArrowDown') { e.preventDefault(); setVolume(state.volume-0.05); }
   });
 
-  // 🎙️ Voice search integration
-  setupVoiceSearch('#btn-dashboard-mic', '#search-music-input', (text) => debouncedDashSearch(text));
-  setupVoiceSearch('#btn-room-mic', '#room-search-input', (text) => debouncedRoomSearch(text));
+  // Voice search integration
+  setupVoiceSearch('#btn-search-mic', '#search-music-input', (text) => debouncedDashSearch(text));
+  setupVoiceSearch('#btn-room-search-mic', '#room-search-input', (text) => debouncedRoomSearch(text));
 
-  // 🎧 Expanded Player bar and controls integration
+  // Expanded Player bar and controls integration
   const playbar = $('#global-player-bar');
   if (playbar) {
     playbar.addEventListener('click', (e) => {
@@ -1199,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ══════════════ ADDITIONAL HELPER FUNCTIONS ══════════════ */
 
-// 🎙️ Voice Search
+// Voice Search
 function setupVoiceSearch(btnId, inputId, searchCallback) {
   const btn = $(btnId);
   const input = $(inputId);
@@ -1248,7 +1248,7 @@ function setupVoiceSearch(btnId, inputId, searchCallback) {
   };
 }
 
-// 🎧 Expanded Player Views
+// Expanded Player Views
 function expandPlayer() {
   const ep = $('#expanded-player');
   if (!ep) return;
