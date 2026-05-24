@@ -528,19 +528,19 @@ function renderRoomCards(rooms, sel) {
     card.className = 'room-card';
     const isOwner = state.user && r.creator_id === state.user.id;
     card.innerHTML = `
+      ${isOwner ? `<button class="room-card-delete-btn" title="Delete Room">✕</button>` : ''}
       <div class="room-card-name">${escapeHtml(r.name)}</div>
       <div class="room-card-listeners">${r.listener_count ?? 0} listening</div>
       <div class="room-card-track">${r.current_track ? escapeHtml(r.current_track.title) : 'No track playing'}</div>
       <div class="room-card-actions">
         <button class="btn btn-primary btn-sm join-btn">Join Room</button>
-        ${isOwner ? `<button class="btn btn-danger btn-sm delete-room-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; display:inline-block;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete</button>` : ''}
       </div>`;
     card.querySelector('.join-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       navigateTo(`#/room/${r.code}`);
     });
     if (isOwner) {
-      card.querySelector('.delete-room-btn').addEventListener('click', async (e) => {
+      card.querySelector('.room-card-delete-btn').addEventListener('click', async (e) => {
         e.stopPropagation();
         if (confirm(`Are you sure you want to delete room "${r.name}"?`)) {
           const res = await api.delete(`/api/rooms/${r.id}`);
