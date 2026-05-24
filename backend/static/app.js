@@ -15,7 +15,7 @@ const nameColor = n => `hsl(${[...n].reduce((h,c)=>c.charCodeAt(0)+((h<<5)-h),0)
 const state = {
   user: null, token: null, currentRoom: null, currentTrack: null,
   isPlaying: false, volume: 0.7, queue: [], history: [], rooms: [], ws: null,
-  likedSongs: new Set(),
+  likedSongs: new Set(), removedTrackIds: new Set(),
 };
 
 let isFillingQueue = false;
@@ -63,8 +63,9 @@ async function ensureQueueFilled() {
     if (state.currentTrack && state.currentTrack.id) {
       existingIds.add(state.currentTrack.id);
     }
-    const recentHistory = state.history.slice(-15);
+    const recentHistory = state.history.slice(-30);
     recentHistory.forEach(t => { if (t && t.id) existingIds.add(t.id); });
+    state.removedTrackIds.forEach(id => existingIds.add(id));
 
     let fetchedTracks = [];
     if (seedTrack && seedTrack.id) {
@@ -448,6 +449,7 @@ function logout() {
   state.isPlaying = false;
   state.currentTrack = null;
   state.queue = [];
+  state.removedTrackIds = new Set();
   audio.pause();
   audio.src = '';
   updatePlaybackUI();
@@ -512,6 +514,7 @@ async function enterRoom(code) {
 function leaveRoom() {
   if (state.ws) { state.ws.close(); state.ws = null; }
   state.currentRoom = null; state.currentTrack = null; state.queue = [];
+  state.removedTrackIds = new Set();
   state.isPlaying = false; audio.pause();
   navigateTo('#/dashboard');
 }
@@ -924,6 +927,9 @@ function renderSearchResultsList(tracks, sel) {
 }
 
 function playTrack(track) {
+  if (track && track.id) {
+    state.removedTrackIds.delete(track.id);
+  }
   if(state.currentRoom) sendWS('play_track', {track});
   else {
     loadTrack(track);
@@ -935,6 +941,9 @@ function playTrack(track) {
 }
 
 function addToQueue(track) {
+  if (track && track.id) {
+    state.removedTrackIds.delete(track.id);
+  }
   state.queue.push(track); renderQueue();
   if(state.currentRoom) sendWS('queue_update', {queue:state.queue});
   showToast(`Added "${track.title}" to queue`, 'success');
@@ -947,6 +956,9 @@ function removeFromQueue(index) {
   } else {
     if (index >= 0 && index < state.queue.length) {
       const removed = state.queue.splice(index, 1)[0];
+      if (removed && removed.id) {
+        state.removedTrackIds.add(removed.id);
+      }
       renderQueue();
       renderExpandedQueue();
       showToast(`Removed "${removed.title}" from queue`, 'info');
@@ -1921,6 +1933,7 @@ async function loadPlaylistsProfile() {
     card.querySelector('.play-pl-btn').addEventListener('click', () => {
       if (tracks.length > 0) {
         state.queue = [...tracks];
+        tracks.forEach(t => { if (t && t.id) state.removedTrackIds.delete(t.id); });
         const first = state.queue.shift();
         playTrack(first);
         renderQueue();

@@ -40,6 +40,7 @@ class RoomState:
     queue: List[dict] = field(default_factory=list)
     chat_history: List[dict] = field(default_factory=list)
     history: List[dict] = field(default_factory=list)
+    removed_track_ids: set = field(default_factory=set)
 
     def get_current_position(self) -> float:
         """Calculate current playback position based on server clock."""
@@ -128,6 +129,10 @@ class RoomManager:
                     existing_ids = {t.get("id") for t in room.queue if t.get("id")}
                     if room.current_track and room.current_track.get("id"):
                         existing_ids.add(room.current_track.get("id"))
+                    for hist_track in room.history:
+                        if hist_track and hist_track.get("id"):
+                            existing_ids.add(hist_track.get("id"))
+                    existing_ids.update(room.removed_track_ids)
                     
                     for t in sim_tracks:
                         tid = t.get("id")
@@ -149,9 +154,13 @@ class RoomManager:
                     existing_ids = {t.get("id") for t in room.queue if t.get("id")}
                     if room.current_track and room.current_track.get("id"):
                         existing_ids.add(room.current_track.get("id"))
+                    for hist_track in room.history:
+                        if hist_track and hist_track.get("id"):
+                            existing_ids.add(hist_track.get("id"))
                     for t in tracks_to_add:
                         if t.get("id"):
                             existing_ids.add(t.get("id"))
+                    existing_ids.update(room.removed_track_ids)
                             
                     for t in trending_tracks:
                         tid = t.get("id")
@@ -281,6 +290,9 @@ class RoomManager:
             # User wants to play a specific track
             track = data.get("track")
             if track:
+                tid = track.get("id")
+                if tid and tid in room.removed_track_ids:
+                    room.removed_track_ids.remove(tid)
                 room.set_track(track)
                 await self._broadcast(room, {
                     "type": "play_track",
@@ -317,6 +329,9 @@ class RoomManager:
         elif msg_type == "queue_track":
             track = data.get("track")
             if track:
+                tid = track.get("id")
+                if tid and tid in room.removed_track_ids:
+                    room.removed_track_ids.remove(tid)
                 room.queue.append(track)
                 await self._broadcast(room, {
                     "type": "queue_update",
@@ -407,7 +422,9 @@ class RoomManager:
         elif msg_type == "remove_from_queue":
             index = data.get("index")
             if index is not None and 0 <= index < len(room.queue):
-                room.queue.pop(index)
+                removed = room.queue.pop(index)
+                if removed and removed.get("id"):
+                    room.removed_track_ids.add(removed.get("id"))
                 await self._broadcast(room, {
                     "type": "queue_update",
                     "data": {"queue": room.queue},
@@ -441,15 +458,6 @@ class RoomManager:
                 await self._broadcast(room, {
                     "type": "chat_message",
                     "data": chat_msg,
-                })
-
-        elif msg_type == "remove_from_queue":
-            index = data.get("index")
-            if index is not None and 0 <= index < len(room.queue):
-                room.queue.pop(index)
-                await self._broadcast(room, {
-                    "type": "queue_update",
-                    "data": {"queue": room.queue},
                 })
 
     async def _sync_loop(self, code: str):
