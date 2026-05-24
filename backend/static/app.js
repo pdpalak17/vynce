@@ -19,6 +19,29 @@ const state = {
 };
 
 let isFillingQueue = false;
+const presenceTimeouts = new Map();
+
+function handleUserJoined(username, listenerCount) {
+  updateLC(listenerCount);
+  if (presenceTimeouts.has(username)) {
+    clearTimeout(presenceTimeouts.get(username));
+    presenceTimeouts.delete(username);
+  } else {
+    showToast(`${username} joined`, 'info');
+  }
+}
+
+function handleUserLeft(username, listenerCount) {
+  updateLC(listenerCount);
+  if (presenceTimeouts.has(username)) {
+    clearTimeout(presenceTimeouts.get(username));
+  }
+  const timeoutId = setTimeout(() => {
+    showToast(`${username} left`, 'info');
+    presenceTimeouts.delete(username);
+  }, 3000);
+  presenceTimeouts.set(username, timeoutId);
+}
 
 async function ensureQueueFilled() {
   if (state.currentRoom) return;
@@ -519,7 +542,14 @@ function connectToRoom(code) {
   if (state.ws?.readyState <= WebSocket.OPEN) state.ws.close();
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/${code}?token=${encodeURIComponent(state.token)}`);
-  ws.onopen = () => { wsRetries = 0; startHeartbeat(); };
+  ws.onopen = () => {
+    setTimeout(() => {
+      if (state.ws === ws && ws.readyState === WebSocket.OPEN) {
+        wsRetries = 0;
+      }
+    }, 5000);
+    startHeartbeat();
+  };
   ws.onmessage = e => { try { handleWSMessage(JSON.parse(e.data)); } catch(err) { console.error('[WS]', err); } };
   ws.onclose = () => { stopHeartbeat(); if (state.currentRoom?.code === code) attemptReconnect(code); };
   ws.onerror = err => console.error('[WS] Error', err);
@@ -535,8 +565,8 @@ function handleWSMessage(msg) {
       if (d.queue) { state.queue = d.queue; renderQueue(); renderExpandedQueue(); }
       if (d.users) renderListeners(d.users);
       updatePlaybackUI(); break;
-    case 'user_joined': showToast(`${escapeHtml(d.username)} joined`, 'info'); updateLC(d.listener_count); break;
-    case 'user_left': showToast(`${escapeHtml(d.username)} left`, 'info'); updateLC(d.listener_count); break;
+    case 'user_joined': handleUserJoined(d.username, d.listener_count); break;
+    case 'user_left': handleUserLeft(d.username, d.listener_count); break;
     case 'play_track': loadTrack(d.track, 0); audio.play().catch(()=>{}); state.isPlaying = true; updatePlaybackUI(); break;
     case 'sync': handleSync(d); break;
     case 'pause': audio.pause(); state.isPlaying = false; updatePlaybackUI(); break;
