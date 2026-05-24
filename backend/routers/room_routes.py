@@ -93,7 +93,7 @@ async def get_room(
     return r
 
 
-@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{room_id}")
 async def delete_room(
     room_id: str,
     user: User = Depends(get_current_user),
@@ -110,3 +110,4 @@ async def delete_room(
 
     room.is_active = False
     await db.commit()
+    return {"message": "Room deleted successfully"}

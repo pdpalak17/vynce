@@ -77,6 +77,12 @@ body {
 }
 .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 30px rgba(123,47,255,0.4); }
 .btn-primary:active { transform:translateY(0); }
+.btn-danger {
+  background:var(--gradient-hot); color:#fff;
+  box-shadow:0 4px 20px rgba(255,45,120,0.25);
+}
+.btn-danger:hover { transform:translateY(-2px); box-shadow:0 6px 30px rgba(255,45,120,0.4); }
+.btn-danger:active { transform:translateY(0); }
 .btn-ghost {
   background:transparent; color:var(--text-2);
   border:1px solid var(--border);
