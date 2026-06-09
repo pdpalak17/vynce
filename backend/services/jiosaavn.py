@@ -384,6 +384,49 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
     }
 
 
+async def get_artist_details(artist_id: str, song_limit: int = 20, album_limit: int = 10) -> dict:
+    """Fetch top songs and albums for a specific artist."""
+    jio = get_jio()
+    try:
+        results = await anyio.to_thread.run_sync(jio.artist_info, artist_id, song_limit, album_limit)
+        if results and isinstance(results, list) and len(results) > 0:
+            info = results[0]
+            top_songs = [_parse_track(s) for s in info.get("top_songs", [])]
+            
+            thumbnails = info.get("thumbnails") or {}
+            quality = thumbnails.get("quality") or {}
+            art = quality.get("500x500") or quality.get("150x150") or ""
+            
+            top_albums = []
+            for a in info.get("top_albums", []):
+                album_thumbnails = a.get("thumbnails") or {}
+                album_quality = album_thumbnails.get("quality") or {}
+                album_art = album_quality.get("150x150") or album_quality.get("500x500") or ""
+                top_albums.append({
+                    "id": a.get("album_id", ""),
+                    "name": a.get("title", "Unknown Album"),
+                    "artist": a.get("primary_artists") or "Unknown Artist",
+                    "art": album_art,
+                    "year": a.get("release_year", ""),
+                    "song_count": int(a.get("track_count", 0) or 0),
+                    "language": a.get("album_language", ""),
+                })
+            
+            return {
+                "id": info.get("artist_id", ""),
+                "name": info.get("name", "Unknown Artist"),
+                "subtitle": info.get("subtitle", ""),
+                "role": info.get("role", "artist"),
+                "art": art,
+                "top_songs": top_songs,
+                "top_albums": top_albums,
+            }
+        return {}
+    except Exception as e:
+        logger.error(f"JioSaavn artist info error: {e}")
+        return {}
+
+
 async def get_lyrics(song_id: str) -> Optional[str]:
     """Fetch lyrics for a song from JioSaavn."""
     jio = get_jio()

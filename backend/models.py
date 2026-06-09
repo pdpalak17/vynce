@@ -109,3 +109,23 @@ class UserHistory(Base):
     track_stream_url = Column(String(1000), default="")
     played_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+
+class CoPlay(Base):
+    __tablename__ = "co_plays"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    song_a_id = Column(String(50), nullable=False)
+    song_b_id = Column(String(50), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DailyMix(Base):
+    __tablename__ = "daily_mixes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    tracks = Column(Text, default="[]")  # JSON string of tracks
+    generated_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+

@@ -55,6 +55,28 @@ Powered by a sleek FastAPI backend and a responsive, glassmorphic single-page ap
 * **Live Chat Bubble**: Converse with everyone in the room. Shows unique color-coded user avatars.
 * **Listener list**: Shows live indicators of users active in the session.
 
+### 9. Network Latency Compensation
+* **Dynamic Network Adjustment**: Appends server timestamps to all sync, play, resume, and seek WebSocket events.
+* **Latency Calculation**: Frontend calculates transmission delay using network roundtrip difference and compensates the local player's starting positions.
+
+### 10. Global Keyboard Shortcuts
+* **Immersive Playback Controls**: Control the application via hotkeys (active only when input/textbox fields are not focused):
+  * `Space`: Toggle Play/Pause.
+  * `ArrowLeft` / `ArrowRight`: Seek backward/forward 10 seconds.
+  * `ArrowUp` / `ArrowDown`: Adjust volume levels.
+  * `N` / `n`: Skip to next track in queue.
+  * `L` / `l`: Toggle like state for the active song.
+  * `M` / `m`: Mute or restore volume levels.
+
+### 11. Democratic Queue Voting
+* **Collaborative Skip Voting**: Adds Thumbs Up/Down voting controls directly on tracks within a room queue.
+* **Skipping Calculation**: If downvotes on a track exceed 50% of active users, the track is automatically skipped and dropped from the queue.
+
+### 12. Offline Caching Service Worker
+* **Range-Request Caching**: Service worker (`sw.js`) intercepts media stream requests to fetch and store files offline in cache storage.
+* **Storage Optimization**: Limits cache to the last 20 played audio tracks to save local storage space.
+* **Fallback Placeholder**: Displays a premium SVG placeholder image in the minimized player bar when a track's metadata has no album art.
+
 ---
 
 ## Architecture

@@ -190,6 +190,7 @@ class RoomManager:
                         "track": next_track,
                         "position": 0,
                         "user_id": "system",
+                        "server_time": time.time(),
                     },
                 })
                 await self._broadcast(room, {
@@ -227,6 +228,7 @@ class RoomManager:
                 "is_playing": room.is_playing,
                 "position": room.get_current_position(),
                 "queue": room.queue,
+                "server_time": time.time(),
                 "users": [
                     {"user_id": u.user_id, "username": u.username, "avatar_url": u.avatar_url}
                     for u in room.users.values()
@@ -300,6 +302,7 @@ class RoomManager:
                         "track": track,
                         "position": 0,
                         "user_id": user_id,
+                        "server_time": time.time(),
                     },
                 })
                 await self.ensure_room_queue_filled(room)
@@ -315,7 +318,10 @@ class RoomManager:
             room.play()
             await self._broadcast(room, {
                 "type": "resume",
-                "data": {"position": room.playback_position},
+                "data": {
+                    "position": room.playback_position,
+                    "server_time": time.time(),
+                },
             })
 
         elif msg_type == "seek":
@@ -323,7 +329,10 @@ class RoomManager:
             room.seek(position)
             await self._broadcast(room, {
                 "type": "seek",
-                "data": {"position": position},
+                "data": {
+                    "position": position,
+                    "server_time": time.time(),
+                },
             })
 
         elif msg_type == "queue_track":
@@ -354,6 +363,7 @@ class RoomManager:
                         "track": next_track,
                         "position": 0,
                         "user_id": user_id,
+                        "server_time": time.time(),
                     },
                 })
                 await self._broadcast(room, {
@@ -382,6 +392,7 @@ class RoomManager:
                         "track": prev_track,
                         "position": 0,
                         "user_id": user_id,
+                        "server_time": time.time(),
                     },
                 })
                 await self._broadcast(room, {
@@ -439,6 +450,37 @@ class RoomManager:
                         "data": {"position": 0.0},
                     })
 
+        elif msg_type == "vote_track":
+            index = data.get("index")
+            vote_val = data.get("value")
+            if index is not None and 0 <= index < len(room.queue) and vote_val in (1, -1):
+                track = room.queue[index]
+                if "votes" not in track:
+                    track["votes"] = {}
+                
+                current_vote = track["votes"].get(user_id)
+                if current_vote == vote_val:
+                    track["votes"].pop(user_id, None)
+                else:
+                    track["votes"][user_id] = vote_val
+                
+                downvotes = sum(1 for val in track["votes"].values() if val == -1)
+                active_users_count = len(room.users)
+                if active_users_count > 0 and (downvotes / active_users_count) > 0.5:
+                    removed = room.queue.pop(index)
+                    if removed and removed.get("id"):
+                        room.removed_track_ids.add(removed.get("id"))
+                    await self._broadcast(room, {
+                        "type": "queue_update",
+                        "data": {"queue": room.queue},
+                    })
+                    await self.ensure_room_queue_filled(room)
+                else:
+                    await self._broadcast(room, {
+                        "type": "queue_update",
+                        "data": {"queue": room.queue},
+                    })
+
         elif msg_type == "chat_message":
             text = data.get("text", "").strip()
             if text:
@@ -485,6 +527,7 @@ class RoomManager:
                                     "track": next_track,
                                     "position": 0,
                                     "user_id": "system",
+                                    "server_time": time.time(),
                                 },
                             })
                             await self._broadcast(room, {
@@ -510,6 +553,7 @@ class RoomManager:
                                                 "track": next_track,
                                                 "position": 0,
                                                 "user_id": "system",
+                                                "server_time": time.time(),
                                             },
                                         })
                                         await self.ensure_room_queue_filled(room)

@@ -16,6 +16,9 @@ const state = {
   user: null, token: null, currentRoom: null, currentTrack: null,
   isPlaying: false, volume: 0.7, queue: [], history: [], rooms: [], ws: null,
   likedSongs: new Set(), removedTrackIds: new Set(),
+  repeatMode: 'none', // 'none', 'one', 'all'
+  shuffleMode: false,
+  originalQueue: [],
 };
 
 let isFillingQueue = false;
@@ -45,6 +48,9 @@ function handleUserLeft(username, listenerCount) {
 
 async function ensureQueueFilled() {
   if (state.currentRoom) return;
+  const autoplayCheckbox = $('#toggle-autoplay');
+  const autoplayEnabled = autoplayCheckbox ? autoplayCheckbox.checked : true;
+  if (!autoplayEnabled) return;
   if (isFillingQueue) return;
   if (state.queue.length >= 5) return;
 
@@ -117,16 +123,23 @@ async function ensureQueueFilled() {
 }
 
 /* ═══════ AUDIO & HIGH-FIDELITY PROCESSING ═══════ */
-const audio = new Audio();
+let audio = new Audio();
 audio.crossOrigin = 'anonymous';
 audio.preload = 'auto';
+
+let audio2 = new Audio();
+audio2.crossOrigin = 'anonymous';
+audio2.preload = 'auto';
+
 const savedVol = localStorage.getItem('vynce_volume');
 if (savedVol !== null) state.volume = parseFloat(savedVol);
 audio.volume = state.volume;
+audio2.volume = state.volume;
 
 // Web Audio API Pipeline for Hi-Fi Enhancement
 let audioCtx = null;
 let sourceNode = null;
+let sourceNode2 = null;
 let filterBass = null;
 let filterMid = null;
 let filterTreble = null;
@@ -142,6 +155,7 @@ function initAudioPipeline() {
 
     // Create MediaElementSource from the audio tag
     sourceNode = audioCtx.createMediaElementSource(audio);
+    sourceNode2 = audioCtx.createMediaElementSource(audio2);
 
     // Bass Filter (warmth & sub-bass boost around 80Hz)
     filterBass = audioCtx.createBiquadFilter();
@@ -173,6 +187,7 @@ function initAudioPipeline() {
 
     // Connect nodes in series: source -> Bass -> Mid -> Treble -> Compressor -> Output
     sourceNode.connect(filterBass);
+    sourceNode2.connect(filterBass);
     filterBass.connect(filterMid);
     filterMid.connect(filterTreble);
     filterTreble.connect(compressor);
@@ -180,6 +195,7 @@ function initAudioPipeline() {
 
     isAudioPipelineInitialized = true;
     console.log('[HiFi-Pipeline] Web Audio dynamic processing chain activated successfully.');
+    initEQCanvas();
   } catch (e) {
     console.warn('[HiFi-Pipeline] Initialization deferred or blocked (e.g. CORS or user gesture required)', e);
   }
@@ -216,6 +232,7 @@ function applyEQPreset(presetName) {
     compressor.threshold.setTargetAtTime(thresh, audioCtx.currentTime, 0.1);
   }
   console.log(`[HiFi-Pipeline] EQ preset applied: ${presetName}`);
+  setTimeout(drawEQCurve, 150); // Delay slightly to allow gains to start changing
 }
 
 function toggleAudioEnhancer(enabled) {
@@ -227,6 +244,105 @@ function toggleAudioEnhancer(enabled) {
   } else {
     applyEQPreset('flat');
   }
+  setTimeout(drawEQCurve, 150);
+}
+
+let eqCanvas = null;
+let eqCanvasCtx = null;
+
+function initEQCanvas() {
+  eqCanvas = $('#eq-canvas');
+  if (eqCanvas) {
+    eqCanvasCtx = eqCanvas.getContext('2d');
+    eqCanvas.width = eqCanvas.offsetWidth || 300;
+    eqCanvas.height = eqCanvas.offsetHeight || 60;
+    drawEQCurve();
+  }
+}
+
+function drawEQCurve() {
+  eqCanvas = $('#eq-canvas');
+  if (!eqCanvas) return;
+  if (!eqCanvasCtx) {
+    eqCanvasCtx = eqCanvas.getContext('2d');
+    eqCanvas.width = eqCanvas.offsetWidth || 300;
+    eqCanvas.height = eqCanvas.offsetHeight || 60;
+  }
+  const width = eqCanvas.width;
+  const height = eqCanvas.height;
+  eqCanvasCtx.clearRect(0, 0, width, height);
+
+  const numPoints = 100;
+  const frequencies = new Float32Array(numPoints);
+  for (let i = 0; i < numPoints; i++) {
+    const minF = 20;
+    const maxF = 20000;
+    frequencies[i] = minF * Math.pow(maxF / minF, i / (numPoints - 1));
+  }
+
+  const magResponseBass = new Float32Array(numPoints);
+  const phaseResponseBass = new Float32Array(numPoints);
+  const magResponseMid = new Float32Array(numPoints);
+  const phaseResponseMid = new Float32Array(numPoints);
+  const magResponseTreble = new Float32Array(numPoints);
+  const phaseResponseTreble = new Float32Array(numPoints);
+
+  const enabled = $('#toggle-audio-enhancer') ? $('#toggle-audio-enhancer').checked : true;
+
+  if (enabled && filterBass && filterMid && filterTreble) {
+    filterBass.getFrequencyResponse(frequencies, magResponseBass, phaseResponseBass);
+    filterMid.getFrequencyResponse(frequencies, magResponseMid, phaseResponseMid);
+    filterTreble.getFrequencyResponse(frequencies, magResponseTreble, phaseResponseTreble);
+  } else {
+    magResponseBass.fill(1.0);
+    magResponseMid.fill(1.0);
+    magResponseTreble.fill(1.0);
+  }
+
+  const dbResponse = new Float32Array(numPoints);
+  for (let i = 0; i < numPoints; i++) {
+    const combinedMag = magResponseBass[i] * magResponseMid[i] * magResponseTreble[i];
+    dbResponse[i] = 20 * Math.log10(combinedMag);
+  }
+
+  eqCanvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  eqCanvasCtx.lineWidth = 1;
+  const zeroY = height / 2;
+  eqCanvasCtx.beginPath();
+  eqCanvasCtx.moveTo(0, zeroY);
+  eqCanvasCtx.lineTo(width, zeroY);
+  eqCanvasCtx.stroke();
+
+  eqCanvasCtx.beginPath();
+  eqCanvasCtx.lineWidth = 2;
+  const gradient = eqCanvasCtx.createLinearGradient(0, 0, width, 0);
+  gradient.addColorStop(0, '#00D4FF');
+  gradient.addColorStop(0.5, '#7B2FFF');
+  gradient.addColorStop(1, '#FF2D78');
+  eqCanvasCtx.strokeStyle = gradient;
+
+  const maxDb = 12;
+
+  for (let i = 0; i < numPoints; i++) {
+    const x = (i / (numPoints - 1)) * width;
+    const db = dbResponse[i];
+    const y = zeroY - (db / maxDb) * (height / 2.5);
+    if (i === 0) {
+      eqCanvasCtx.moveTo(x, y);
+    } else {
+      eqCanvasCtx.lineTo(x, y);
+    }
+  }
+  eqCanvasCtx.stroke();
+  
+  eqCanvasCtx.lineTo(width, height);
+  eqCanvasCtx.lineTo(0, height);
+  eqCanvasCtx.closePath();
+  const fillGradient = eqCanvasCtx.createLinearGradient(0, 0, 0, height);
+  fillGradient.addColorStop(0, 'rgba(0, 229, 255, 0.05)');
+  fillGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  eqCanvasCtx.fillStyle = fillGradient;
+  eqCanvasCtx.fill();
 }
 
 // Prime AudioContext on first interaction
@@ -237,10 +353,10 @@ function toggleAudioEnhancer(enabled) {
 });
 
 /* ═══════ API ═══════ */
-async function api(method, path, body) {
+async function api(method, path, body, options = {}) {
   const h = { 'Content-Type': 'application/json' };
   if (state.token) h['Authorization'] = `Bearer ${state.token}`;
-  const opts = { method, headers: h };
+  const opts = { method, headers: h, ...options };
   if (body && method !== 'GET') opts.body = JSON.stringify(body);
   try {
     const res = await fetch(path, opts);
@@ -580,25 +696,60 @@ function handleWSMessage(msg) {
   const d = msg.data || msg;
   switch(msg.type) {
     case 'room_state':
-      if (d.current_track) loadTrack(d.current_track, d.position || 0);
+      if (d.current_track) {
+        const now = Date.now();
+        const serverTimeMs = (d.server_time || 0) * 1000;
+        const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+        loadTrack(d.current_track, (d.position || 0) + latency);
+      }
       if (d.is_playing) { audio.play().catch(()=>{}); state.isPlaying = true; }
       if (d.queue) { state.queue = d.queue; renderQueue(); renderExpandedQueue(); }
       if (d.users) renderListeners(d.users);
       updatePlaybackUI(); break;
     case 'user_joined': handleUserJoined(d.username, d.listener_count); break;
     case 'user_left': handleUserLeft(d.username, d.listener_count); break;
-    case 'play_track': loadTrack(d.track, 0); audio.play().catch(()=>{}); state.isPlaying = true; updatePlaybackUI(); break;
+    case 'play_track': {
+      const now = Date.now();
+      const serverTimeMs = (d.server_time || 0) * 1000;
+      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+      loadTrack(d.track, latency);
+      audio.play().catch(()=>{});
+      state.isPlaying = true;
+      updatePlaybackUI(); break;
+    }
     case 'sync': handleSync(d); break;
     case 'pause': audio.pause(); state.isPlaying = false; updatePlaybackUI(); break;
-    case 'resume': audio.play().catch(()=>{}); state.isPlaying = true; updatePlaybackUI(); break;
-    case 'seek': audio.currentTime = d.position; break;
+    case 'resume': {
+      const now = Date.now();
+      const serverTimeMs = (d.server_time || 0) * 1000;
+      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+      audio.currentTime = d.position + latency;
+      audio.play().catch(()=>{});
+      state.isPlaying = true;
+      updatePlaybackUI(); break;
+    }
+    case 'seek': {
+      const now = Date.now();
+      const serverTimeMs = (d.server_time || 0) * 1000;
+      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+      audio.currentTime = d.position + latency; break;
+    }
     case 'queue_update': state.queue = d.queue || []; renderQueue(); renderExpandedQueue(); break;
     case 'chat_message': appendChatMessage(d); break;
     case 'error': showToast(d.message || 'Error', 'error'); break;
     case 'pong': break;
   }
 }
-function handleSync(d) { if(!audio.src || !state.currentTrack) return; if(Math.abs(audio.currentTime - d.position) > 0.5) audio.currentTime = d.position; }
+function handleSync(d) {
+  if(!audio.src || !state.currentTrack) return;
+  const now = Date.now();
+  const serverTimeMs = (d.server_time || 0) * 1000;
+  const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+  const adjusted = d.position + latency;
+  if(Math.abs(audio.currentTime - adjusted) > 0.5) {
+    audio.currentTime = adjusted;
+  }
+}
 function sendWS(type, data = {}) { if(state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({type, data})); }
 function startHeartbeat() { stopHeartbeat(); wsHeartbeat = setInterval(() => { if(state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({type:'ping'})); }, 30000); }
 function stopHeartbeat() { if(wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; } }
@@ -618,7 +769,18 @@ function loadTrack(track, startAt = 0, isRestore = false) {
   const a = $('#player-track-artist'); if(a) a.textContent = track.artist || 'Unknown';
   const d = $('#time-total'); if(d) d.textContent = formatTime(track.duration);
   const img = $('#player-album-art');
-  if(img) { img.src = track.album_art || ''; img.alt = track.title || ''; }
+  const placeholder = $('#player-placeholder-icon');
+  if(img) {
+    if (track.album_art) {
+      img.src = track.album_art;
+      img.alt = track.title || '';
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
+  }
   const bar = $('#progress-fill'); if(bar) bar.style.width = '0%';
   const cur = $('#time-current'); if(cur) cur.textContent = '0:00';
 
@@ -705,30 +867,217 @@ async function playPrev() {
 }
 
 let lastSavedTime = 0;
-audio.addEventListener('timeupdate', () => {
-  const dur = audio.duration || state.currentTrack?.duration || 0; if(!dur) return;
-  const pct = (audio.currentTime/dur)*100;
-  const bar = $('#progress-fill'); if(bar) bar.style.width = `${pct}%`;
-  const thumb = $('#progress-thumb'); if(thumb) thumb.style.left = `${pct}%`;
-  const cur = $('#time-current'); if(cur) cur.textContent = formatTime(audio.currentTime);
+let isCrossfading = false;
 
-  const expBar = $('#expanded-progress-fill'); if(expBar) expBar.style.width = `${pct}%`;
-  const expThumb = $('#expanded-progress-thumb'); if(expThumb) expThumb.style.left = `${pct}%`;
-  const expCur = $('#expanded-time-current'); if(expCur) expCur.textContent = formatTime(audio.currentTime);
-
-  if (state.currentTrack && Math.abs(audio.currentTime - lastSavedTime) >= 1) {
-    try {
-      localStorage.setItem('vynce_last_time', audio.currentTime.toString());
-      lastSavedTime = audio.currentTime;
-    } catch(e) {}
+async function startCrossfade() {
+  if (isCrossfading || state.currentRoom) return;
+  if (state.queue.length === 0) return;
+  
+  isCrossfading = true;
+  const nextTrack = state.queue[0];
+  console.log("[Playback] Crossfading to next song:", nextTrack.title);
+  
+  // Load next song on the inactive player (audio2)
+  audio2.src = nextTrack.stream_url;
+  audio2.playbackRate = audio.playbackRate;
+  
+  // Set volume of next player to 0 and start playing
+  audio2.volume = 0;
+  
+  try {
+    await audio2.play();
+  } catch (err) {
+    console.warn("[Playback] Crossfade play failed, performing standard playNext:", err);
+    isCrossfading = false;
+    playNext();
+    return;
   }
-});
-audio.addEventListener('ended', () => { state.isPlaying = false; updatePlaybackUI(); playNext(); });
-audio.addEventListener('error', () => {
-  if (!state.isPlaying || !audio.src || audio.src === window.location.href) return;
-  showToast('Playback error — skipping', 'error');
-  playNext();
-});
+  
+  // Fade transition parameters
+  const fadeDuration = 3.0; // seconds
+  const steps = 30;
+  const intervalTime = (fadeDuration * 1000) / steps;
+  let currentStep = 0;
+  
+  const initialVolume = state.volume;
+  
+  const crossfadeInterval = setInterval(() => {
+    currentStep++;
+    const ratio = currentStep / steps;
+    
+    // Fade out active player
+    audio.volume = initialVolume * (1 - ratio);
+    // Fade in inactive player
+    audio2.volume = initialVolume * ratio;
+    
+    if (currentStep >= steps) {
+      clearInterval(crossfadeInterval);
+      
+      // Stop the faded-out song
+      audio.pause();
+      audio.src = '';
+      
+      // Swap elements
+      const temp = audio;
+      audio = audio2;
+      audio2 = temp;
+      
+      // Update volume to standard target
+      audio.volume = initialVolume;
+      
+      // Update state
+      state.currentTrack = nextTrack;
+      state.queue.shift();
+      
+      renderQueue();
+      renderExpandedQueue();
+      updateExpandedPlayerUI();
+      logHistoryToBackend(nextTrack);
+      
+      isCrossfading = false;
+      ensureQueueFilled();
+    }
+  }, intervalTime);
+}
+
+function setupAudioEvents(audioEl) {
+  audioEl.addEventListener('timeupdate', () => {
+    if (audioEl !== audio) return; // Only process active player
+    
+    const dur = audio.duration || state.currentTrack?.duration || 0; if(!dur) return;
+    const pct = (audio.currentTime/dur)*100;
+    const bar = $('#progress-fill'); if(bar) bar.style.width = `${pct}%`;
+    const thumb = $('#progress-thumb'); if(thumb) thumb.style.left = `${pct}%`;
+    const cur = $('#time-current'); if(cur) cur.textContent = formatTime(audio.currentTime);
+
+    const expBar = $('#expanded-progress-fill'); if(expBar) expBar.style.width = `${pct}%`;
+    const expThumb = $('#expanded-progress-thumb'); if(expThumb) expThumb.style.left = `${pct}%`;
+    const expCur = $('#expanded-time-current'); if(expCur) expCur.textContent = formatTime(audio.currentTime);
+
+    if (state.currentTrack && Math.abs(audio.currentTime - lastSavedTime) >= 1) {
+      try {
+        localStorage.setItem('vynce_last_time', audio.currentTime.toString());
+        lastSavedTime = audio.currentTime;
+      } catch(e) {}
+    }
+
+    // Sync lyrics highlighting
+    if (parsedLyrics && parsedLyrics.length > 0) {
+      const curTime = audio.currentTime;
+      let activeIdx = -1;
+      for (let i = 0; i < parsedLyrics.length; i++) {
+        if (curTime >= parsedLyrics[i].time) {
+          activeIdx = i;
+        } else {
+          break;
+        }
+      }
+      if (activeIdx !== -1) {
+        const lines = $$('.lyric-line');
+        lines.forEach((l, idx) => {
+          if (idx === activeIdx) {
+            if (!l.classList.contains('active')) {
+              l.classList.add('active');
+              const container = document.getElementById('lyrics-container');
+              if (container) {
+                const containerHeight = container.clientHeight;
+                const lineOffsetTop = l.offsetTop;
+                const lineHeight = l.clientHeight;
+                container.scrollTo({
+                  top: lineOffsetTop - (containerHeight / 2) + (lineHeight / 2),
+                  behavior: 'smooth'
+                });
+              }
+            }
+          } else {
+            l.classList.remove('active');
+          }
+        });
+      }
+    }
+
+    // Trigger crossfade 5 seconds before end if autoplay/next song is in queue, and not in a room
+    if (audio.currentTime >= dur - 5 && !state.currentRoom && state.queue.length > 0 && !isCrossfading) {
+      startCrossfade();
+    }
+  });
+
+  audioEl.addEventListener('ended', () => {
+    if (audioEl !== audio) return;
+    
+    // If repeatMode is 'one', repeat same track
+    if (state.repeatMode === 'one' && state.currentTrack) {
+      loadTrack(state.currentTrack);
+      audio.play().catch(()=>{});
+      state.isPlaying = true;
+      updatePlaybackUI();
+      return;
+    }
+    
+    state.isPlaying = false;
+    updatePlaybackUI();
+    playNext();
+  });
+
+  audioEl.addEventListener('error', () => {
+    if (audioEl !== audio) return;
+    if (!state.isPlaying || !audio.src || audio.src === window.location.href) return;
+    showToast('Playback error — skipping', 'error');
+    playNext();
+  });
+}
+
+setupAudioEvents(audio);
+setupAudioEvents(audio2);
+
+function toggleShuffle() {
+  state.shuffleMode = !state.shuffleMode;
+  
+  // Update shuffle button UI state
+  const btns = [$('#btn-shuffle'), $('#btn-player-shuffle')];
+  btns.forEach(btn => {
+    if (btn) {
+      btn.style.color = state.shuffleMode ? '#00E5FF' : 'var(--text-3)';
+    }
+  });
+
+  if (state.shuffleMode) {
+    // Keep a backup of the original queue order
+    state.originalQueue = [...state.queue];
+    
+    // Shuffle using Fisher-Yates algorithm
+    for (let i = state.queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = state.queue[i];
+      state.queue[i] = state.queue[j];
+      state.queue[j] = temp;
+    }
+  } else {
+    // Restore original queue order
+    if (state.originalQueue.length > 0) {
+      state.queue = [...state.originalQueue];
+    }
+  }
+  
+  renderQueue();
+  renderExpandedQueue();
+}
+
+function toggleRepeat() {
+  if (state.repeatMode === 'none') {
+    state.repeatMode = 'one';
+  } else {
+    state.repeatMode = 'none';
+  }
+  
+  // Update repeat button UI state
+  const btns = [$('#btn-repeat'), $('#btn-player-repeat')];
+  btns.forEach(btn => {
+    if (btn) {
+      btn.style.color = state.repeatMode === 'one' ? '#00E5FF' : 'var(--text-3)';
+    }
+  });
+}
 
 function updatePlaybackUI() {
   const btn = $('#btn-play-pause'); if(!btn) return;
@@ -758,11 +1107,51 @@ function renderQueue() {
   state.queue.forEach((t,i) => {
     const d = document.createElement('div'); d.className = 'queue-item';
     d.style.cursor = 'pointer';
+    
+    let votingHtml = '';
+    if (state.currentRoom) {
+      const votes = t.votes || {};
+      let ups = 0;
+      let downs = 0;
+      let userVote = 0;
+      const currentUserId = state.user?.id || '';
+      for (const [uid, val] of Object.entries(votes)) {
+        if (val === 1) ups++;
+        else if (val === -1) downs++;
+        if (uid === currentUserId) userVote = val;
+      }
+      votingHtml = `
+        <div class="queue-item-votes" style="display: flex; gap: 8px; margin-right: 12px; align-items: center; pointer-events: auto;">
+          <button class="vote-btn vote-up" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === 1 ? '#00E5FF' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Up" data-index="${i}" data-val="1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            <span class="vote-count" style="font-size: 11px;">${ups}</span>
+          </button>
+          <button class="vote-btn vote-down" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === -1 ? '#FF5252' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Down" data-index="${i}" data-val="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+            <span class="vote-count" style="font-size: 11px;">${downs}</span>
+          </button>
+        </div>
+      `;
+    }
+
     d.innerHTML = `
       <img class="queue-item-art" src="${escapeHtml(t.album_art||'')}" alt="" onerror="this.style.display='none'" />
       <div class="queue-item-info"><span class="queue-item-title">${escapeHtml(t.title)}</span><span class="queue-item-artist">${escapeHtml(t.artist)}</span></div>
       <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
+      ${votingHtml}
       <button class="remove-queue-btn" title="Remove from Queue">&times;</button>`;
+
+    if (state.currentRoom) {
+      d.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.index);
+          const val = parseInt(btn.dataset.val);
+          sendWS('vote_track', { index: idx, value: val });
+        });
+      });
+    }
+
     d.querySelector('.remove-queue-btn').addEventListener('click', e => {
       e.stopPropagation();
       removeFromQueue(i);
@@ -783,11 +1172,30 @@ function renderQueue() {
 }
 
 /* ═══════ SEARCH ═══════ */
+const searchCache = new Map();
+
 async function searchMusic(query) {
   if(!query.trim()) return;
+  
+  const cacheKey = query.trim().toLowerCase();
+  if (searchCache.has(cacheKey)) {
+    const cached = searchCache.get(cacheKey);
+    if (Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      console.log(`[Cache] Returning cached results for: ${query}`);
+      return cached.tracks;
+    }
+  }
+
   const data = await api.get(`/api/music/search?q=${encodeURIComponent(query)}&source=all&limit=30`);
   if(!data) return;
-  return data.tracks || [];
+  
+  const tracks = data.tracks || [];
+  searchCache.set(cacheKey, {
+    timestamp: Date.now(),
+    tracks: tracks
+  });
+  
+  return tracks;
 }
 
 // Search History Management
@@ -804,7 +1212,7 @@ function saveSearchToHistory(query) {
   // Filter out the search query if it already exists, and insert at front
   history = history.filter(item => item.toLowerCase() !== q.toLowerCase());
   history.unshift(q);
-  if (history.length > 5) history = history.slice(0, 5);
+  if (history.length > 8) history = history.slice(0, 8);
   
   localStorage.setItem('vynce_recent_searches', JSON.stringify(history));
   renderSearchHistory();
@@ -881,6 +1289,57 @@ async function loadTrending() {
   renderTrackCards(data.tracks || [], '#trending-tracks');
 }
 
+let currentContextTrack = null;
+
+function showContextMenu(e, track) {
+  e.preventDefault();
+  e.stopPropagation();
+  currentContextTrack = track;
+  
+  const menu = $('#global-context-menu');
+  if (!menu) return;
+  
+  let left = e.pageX;
+  let top = e.pageY;
+  const menuWidth = 170;
+  const menuHeight = 150;
+  if (left + menuWidth > window.innerWidth + window.scrollX) {
+    left = window.innerWidth + window.scrollX - menuWidth - 10;
+  }
+  if (top + menuHeight > window.innerHeight + window.scrollY) {
+    top = window.innerHeight + window.scrollY - menuHeight - 10;
+  }
+  
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+  menu.style.display = 'block';
+  
+  const submenu = $('#context-menu-playlists-list');
+  if (submenu) {
+    submenu.innerHTML = '<div class="context-menu-item">Loading...</div>';
+    api.get('/api/playlists').then(playlists => {
+      if (!playlists || !playlists.length) {
+        submenu.innerHTML = '<div class="context-menu-item">No playlists</div>';
+        return;
+      }
+      submenu.innerHTML = '';
+      playlists.forEach(pl => {
+        const plItem = document.createElement('div');
+        plItem.className = 'context-menu-item';
+        plItem.textContent = pl.name;
+        plItem.addEventListener('click', async (evt) => {
+          evt.stopPropagation();
+          menu.style.display = 'none';
+          await addTrackToPlaylist(pl.id, currentContextTrack);
+        });
+        submenu.appendChild(plItem);
+      });
+    }).catch(() => {
+      submenu.innerHTML = '<div class="context-menu-item">Error</div>';
+    });
+  }
+}
+
 function renderTrackCards(tracks, sel) {
   const c = $(sel); if(!c) return;
   c.innerHTML = '';
@@ -909,11 +1368,14 @@ function renderTrackCards(tracks, sel) {
       <div class="track-card-actions">
         <button class="btn btn-primary btn-sm play-btn" style="display: flex; align-items: center; justify-content: center; gap: 4px;"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px; height:12px; display:inline-block;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play</button>
         <button class="btn btn-ghost btn-sm queue-btn">+ Queue</button>
+        <button class="btn btn-ghost btn-sm track-more-btn" style="padding: 0 8px; font-size: 14px; font-weight: bold;">&#8942;</button>
       </div>`;
     card.querySelector('.play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     card.querySelector('.queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
     card.querySelector('.overlay-play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     card.querySelector('.overlay-queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
+    card.querySelector('.track-more-btn').addEventListener('click', e => { e.stopPropagation(); showContextMenu(e, t); });
+    card.addEventListener('contextmenu', e => showContextMenu(e, t));
     card.addEventListener('click', () => playTrack(t));
     c.appendChild(card);
   });
@@ -935,9 +1397,12 @@ function renderSearchResultsList(tracks, sel) {
       <div class="search-result-actions">
         <button class="btn btn-ghost play-btn" title="Play">▶</button>
         <button class="btn btn-ghost queue-btn" title="Add to queue">+</button>
+        <button class="btn btn-ghost track-more-btn" title="More options" style="padding: 0 8px; font-size: 14px; font-weight: bold;">&#8942;</button>
       </div>`;
     item.querySelector('.play-btn').addEventListener('click', e => { e.stopPropagation(); playTrack(t); });
     item.querySelector('.queue-btn').addEventListener('click', e => { e.stopPropagation(); addToQueue(t); });
+    item.querySelector('.track-more-btn').addEventListener('click', e => { e.stopPropagation(); showContextMenu(e, t); });
+    item.addEventListener('contextmenu', e => showContextMenu(e, t));
     item.addEventListener('click', () => playTrack(t));
     c.appendChild(item);
   });
@@ -1194,6 +1659,20 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-play-pause')?.addEventListener('click', togglePlay);
   $('#btn-next')?.addEventListener('click', playNext);
   $('#btn-prev')?.addEventListener('click', playPrev);
+  
+  // Shuffle & Repeat listeners
+  $('#btn-shuffle')?.addEventListener('click', toggleShuffle);
+  $('#btn-player-shuffle')?.addEventListener('click', toggleShuffle);
+  $('#btn-repeat')?.addEventListener('click', toggleRepeat);
+  $('#btn-player-repeat')?.addEventListener('click', toggleRepeat);
+
+  // Playback Speed listener
+  $('#playback-speed-select')?.addEventListener('change', e => {
+    const rate = parseFloat(e.target.value);
+    audio.playbackRate = rate;
+    audio2.playbackRate = rate;
+  });
+
   const progressBar = $('#progress-bar');
   if(progressBar) progressBar.addEventListener('click', e => {
     const pct = (e.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
@@ -1230,8 +1709,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if(e.code === 'Space') { e.preventDefault(); togglePlay(); }
     else if(e.code === 'ArrowRight' && e.shiftKey) playNext();
     else if(e.code === 'ArrowLeft' && e.shiftKey) playPrev();
+    else if(e.code === 'ArrowRight') { e.preventDefault(); seekTo(Math.min(audio.duration || 0, audio.currentTime + 10)); }
+    else if(e.code === 'ArrowLeft') { e.preventDefault(); seekTo(Math.max(0, audio.currentTime - 10)); }
     else if(e.code === 'ArrowUp') { e.preventDefault(); setVolume(state.volume+0.05); }
     else if(e.code === 'ArrowDown') { e.preventDefault(); setVolume(state.volume-0.05); }
+    else if(e.key === 'n' || e.key === 'N') { e.preventDefault(); playNext(); }
+    else if(e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLikeCurrentTrack(); }
+    else if(e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      if (state.volume > 0) {
+        state.preMuteVolume = state.volume;
+        setVolume(0);
+      } else {
+        setVolume(state.preMuteVolume || 0.5);
+      }
+    }
   });
 
   // Voice search integration
@@ -1365,6 +1857,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch(e) {
     console.error("[Vynce] Error restoring last track:", e);
+  }
+
+  // Set up global context menu button actions
+  const menu = $('#global-context-menu');
+  if (menu) {
+    $('#context-menu-play')?.addEventListener('click', () => {
+      menu.style.display = 'none';
+      if (currentContextTrack) playTrack(currentContextTrack);
+    });
+    $('#context-menu-queue')?.addEventListener('click', () => {
+      menu.style.display = 'none';
+      if (currentContextTrack) addToQueue(currentContextTrack);
+    });
+    document.addEventListener('click', () => {
+      menu.style.display = 'none';
+    });
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(reg => console.log('[SW] Registered successfully', reg.scope))
+      .catch(err => console.error('[SW] Registration failed', err));
   }
 
   updateVolumeUI(); updatePlaybackUI();
@@ -1587,37 +2102,113 @@ async function addTrackToPlaylist(playlistId, track) {
 }
 
 // Lyrics & Recommendations & Queue
+let parsedLyrics = [];
+
+function parseLyrics(rawLyrics) {
+  parsedLyrics = [];
+  if (!rawLyrics) return null;
+
+  // Check if it is timestamped (LRC format, e.g. [00:12.34] or [01:05])
+  const lrcRegex = /^\[(\d+):(\d+(?:\.\d+)?)\](.*)/;
+  const lines = rawLyrics.split('\n');
+  
+  let hasTimestamps = false;
+  for (let line of lines) {
+    const trimmed = line.trim();
+    const match = lrcRegex.exec(trimmed);
+    if (match) {
+      hasTimestamps = true;
+      const min = parseInt(match[1]);
+      const sec = parseFloat(match[2]);
+      const text = match[3].trim();
+      parsedLyrics.push({
+        time: min * 60 + sec,
+        text: text
+      });
+    }
+  }
+
+  if (hasTimestamps) {
+    parsedLyrics.sort((a, b) => a.time - b.time);
+    return parsedLyrics;
+  }
+  return null;
+}
+
+function renderLyrics(rawLyrics) {
+  const container = $('#lyrics-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const parsed = parseLyrics(rawLyrics);
+  if (parsed && parsed.length > 0) {
+    parsed.forEach((line, index) => {
+      const el = document.createElement('div');
+      el.className = 'lyric-line';
+      el.id = `lyric-line-${index}`;
+      el.dataset.time = line.time;
+      el.textContent = line.text || '...';
+      el.addEventListener('click', () => {
+        seekTo(line.time);
+      });
+      container.appendChild(el);
+    });
+  } else {
+    const el = document.createElement('p');
+    el.className = 'lyrics-text';
+    el.style.whiteSpace = 'pre-line';
+    el.textContent = rawLyrics || 'Lyrics not available for this song. Enjoy the music!';
+    container.appendChild(el);
+  }
+}
+
 async function loadLyricsAndRelated() {
   const track = state.currentTrack;
   if (!track) return;
 
-  const lyricsTextEl = $('.lyrics-text');
-  if (lyricsTextEl) {
-    lyricsTextEl.textContent = "Loading lyrics...";
+  const container = $('#lyrics-container');
+  if (container) {
+    container.innerHTML = '<p class="lyrics-text">Loading lyrics...</p>';
     try {
       const data = await api.get(`/api/music/song/${track.id}/lyrics`);
       if (data && data.lyrics) {
-        lyricsTextEl.textContent = data.lyrics;
+        renderLyrics(data.lyrics);
       } else {
-        lyricsTextEl.textContent = "Lyrics not available for this song. Enjoy the music!";
+        renderLyrics("Lyrics not available for this song. Enjoy the music!");
       }
     } catch (e) {
-      lyricsTextEl.textContent = "Lyrics not available for this song. Enjoy the music!";
+      renderLyrics("Lyrics not available for this song. Enjoy the music!");
     }
   }
 
   const relatedEl = $('#expanded-related-list');
   if (relatedEl) {
     relatedEl.innerHTML = '<div class="track-skeleton"></div><div class="track-skeleton"></div>';
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    
     try {
-      const data = await api.get(`/api/music/song/${track.id}/similar?limit=12`);
-      if (data && data.tracks) {
+      const data = await api.get(`/api/music/song/${track.id}/similar?limit=12`, null, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (data && data.tracks && data.tracks.length > 0) {
         renderTracksInGrid(data.tracks, relatedEl);
       } else {
-        relatedEl.innerHTML = '<p class="empty-hint">No recommendations available</p>';
+        throw new Error("No recommendations");
       }
     } catch (e) {
-      relatedEl.innerHTML = '<p class="empty-hint">Failed to load recommendations</p>';
+      clearTimeout(timeoutId);
+      console.warn("[Recommendations] Primary fetch failed or timed out, loading fallback", e);
+      try {
+        const fallbackData = await api.get(`/api/music/genre/Bollywood?limit=12`);
+        if (fallbackData && fallbackData.tracks && fallbackData.tracks.length > 0) {
+          renderTracksInGrid(fallbackData.tracks, relatedEl);
+        } else {
+          relatedEl.innerHTML = '<p class="empty-hint">No recommendations available</p>';
+        }
+      } catch (ex) {
+        relatedEl.innerHTML = '<p class="empty-hint">Failed to load recommendations. <button class="btn btn-ghost btn-sm" onclick="loadLyricsAndRelated()">Retry</button></p>';
+      }
     }
   }
   
@@ -1656,6 +2247,33 @@ function renderExpandedQueue() {
     const d = document.createElement('div');
     d.className = 'queue-item';
     d.style.cursor = 'pointer';
+
+    let votingHtml = '';
+    if (state.currentRoom) {
+      const votes = t.votes || {};
+      let ups = 0;
+      let downs = 0;
+      let userVote = 0;
+      const currentUserId = state.user?.id || '';
+      for (const [uid, val] of Object.entries(votes)) {
+        if (val === 1) ups++;
+        else if (val === -1) downs++;
+        if (uid === currentUserId) userVote = val;
+      }
+      votingHtml = `
+        <div class="queue-item-votes" style="display: flex; gap: 8px; margin-right: 12px; align-items: center; pointer-events: auto;">
+          <button class="vote-btn vote-up" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === 1 ? '#00E5FF' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Up" data-index="${i}" data-val="1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+            <span class="vote-count" style="font-size: 11px;">${ups}</span>
+          </button>
+          <button class="vote-btn vote-down" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === -1 ? '#FF5252' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Down" data-index="${i}" data-val="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+            <span class="vote-count" style="font-size: 11px;">${downs}</span>
+          </button>
+        </div>
+      `;
+    }
+
     d.innerHTML = `
       <img class="queue-item-art" src="${escapeHtml(t.album_art||'')}" alt="" onerror="this.style.display='none'" />
       <div class="queue-item-info">
@@ -1663,8 +2281,21 @@ function renderExpandedQueue() {
         <span class="queue-item-artist">${escapeHtml(t.artist)}</span>
       </div>
       <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
+      ${votingHtml}
       <button class="remove-queue-btn" title="Remove from Queue">&times;</button>
     `;
+
+    if (state.currentRoom) {
+      d.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.index);
+          const val = parseInt(btn.dataset.val);
+          sendWS('vote_track', { index: idx, value: val });
+        });
+      });
+    }
+
     d.querySelector('.remove-queue-btn').addEventListener('click', e => {
       e.stopPropagation();
       removeFromQueue(i);
