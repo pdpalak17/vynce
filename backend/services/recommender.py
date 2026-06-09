@@ -123,14 +123,26 @@ def extract_track_features(title: str, artist: str) -> list:
         
     return vector
 
-def recommend_tracks(history_tracks: list, liked_tracks: list, disliked_ids: set, candidate_tracks: list, limit: int = 12) -> list:
+def recommend_tracks(history_tracks: list, liked_tracks: list, disliked_ids: set, candidate_tracks: list, co_play_weights: dict = None, limit: int = 12) -> list:
     """
     Train a ListeningPatternMLP neural network on user's preference history
-    and use it to rank and filter candidate tracks.
+    and use it to rank and filter candidate tracks, applying seed and co-play boosts
+    and adding dynamic recommendation reasons.
     """
     if not candidate_tracks:
         return []
-        
+
+    co_play_weights = co_play_weights or {}
+
+    # Extract seed features for labeling reasons
+    liked_artists = {t.get("artist") or t.get("track_artist") for t in liked_tracks if (t.get("artist") or t.get("track_artist"))}
+    recent_artists = {t.get("artist") or t.get("track_artist") for t in history_tracks[:10] if (t.get("artist") or t.get("track_artist"))}
+    recent_titles = {t.get("title") or t.get("track_title") for t in history_tracks[:10] if (t.get("title") or t.get("track_title"))}
+
+    liked_artists = {a.lower().strip() for a in liked_artists if a}
+    recent_artists = {a.lower().strip() for a in recent_artists if a}
+    recent_titles = {t.lower().strip() for t in recent_titles if t}
+
     # Build positive training samples (history and liked songs)
     positive_samples = []
     seen_pos_ids = set()
@@ -151,11 +163,15 @@ def recommend_tracks(history_tracks: list, liked_tracks: list, disliked_ids: set
             artist = t.get("artist") or t.get("track_artist", "")
             positive_samples.append((title, artist))
 
-    # If the user has no history or very little history, return a fallback diverse list
+    # If the user has no history or very little history, return a fallback list with generic reasons
     if len(positive_samples) < 2:
-        candidates = [c for c in candidate_tracks if (c.get("id") or c.get("track_id")) not in disliked_ids]
+        candidates = [dict(c) for c in candidate_tracks if (c.get("id") or c.get("track_id")) not in disliked_ids]
         random.shuffle(candidates)
-        return candidates[:limit]
+        res = []
+        for c in candidates[:limit]:
+            c["recommendation_reason"] = "Trending choice"
+            res.append(c)
+        return res
 
     # Build negative training samples from candidates not listened to/liked
     negative_samples = []
@@ -191,22 +207,72 @@ def recommend_tracks(history_tracks: list, liked_tracks: list, disliked_ids: set
     # Score all candidate tracks
     scored_candidates = []
     for track in candidate_tracks:
-        tid = track.get("id") or track.get("track_id")
+        track_dict = dict(track)
+        tid = track_dict.get("id") or track_dict.get("track_id")
         if tid in disliked_ids:
             continue
             
-        title = track.get("title") or track.get("track_title", "")
-        artist = track.get("artist") or track.get("track_artist", "")
+        title = track_dict.get("title") or track_dict.get("track_title", "")
+        artist = track_dict.get("artist") or track_dict.get("track_artist", "")
         
         x = extract_track_features(title, artist)
         pred, _, _ = nn.forward(x)
         
-        # Add slight noise (exploration vs exploitation) to prevent rigid repeats
-        score = pred + random.uniform(-0.05, 0.05)
-        scored_candidates.append((score, track))
+        # Base neural net preference score
+        score = pred
 
-    # Sort candidates by neural network score descending
+        # Dynamic Reason Assignment and Boosts
+        reason = "Recommended for you"
+        artist_clean = artist.lower().strip()
+        
+        # 1. Co-play boost
+        if tid in co_play_weights:
+            score += 0.25 * co_play_weights[tid]
+            reason = "Often played next"
+
+        # 2. Liked Artist boost
+        elif artist_clean in liked_artists:
+            score += 0.15
+            # Find the original capitalization of the artist name
+            original_artist = artist
+            for lt in liked_tracks:
+                a_name = lt.get("artist") or lt.get("track_artist")
+                if a_name and a_name.lower().strip() == artist_clean:
+                    original_artist = a_name
+                    break
+            reason = f"Because you like {original_artist}"
+
+        # 3. Recently played Artist boost
+        elif artist_clean in recent_artists:
+            score += 0.10
+            original_artist = artist
+            for ht in history_tracks:
+                a_name = ht.get("artist") or ht.get("track_artist")
+                if a_name and a_name.lower().strip() == artist_clean:
+                    original_artist = a_name
+                    break
+            reason = f"Based on recent listens to {original_artist}"
+
+        # 4. Genre similarity boost (based on Title features)
+        elif "romantic" in title.lower() and "romantic" in "".join(recent_titles):
+            score += 0.05
+            reason = "Romantic vibe you like"
+        elif "sad" in title.lower() and "sad" in "".join(recent_titles):
+            score += 0.05
+            reason = "Sad melodies you like"
+        elif "party" in title.lower() and "party" in "".join(recent_titles):
+            score += 0.05
+            reason = "Party anthems you like"
+
+        # Add slight noise (exploration vs exploitation) to prevent rigid repeats
+        score += random.uniform(-0.03, 0.03)
+        
+        track_dict["recommendation_reason"] = reason
+        scored_candidates.append((score, track_dict))
+
+    # Sort candidates by final score descending
     scored_candidates.sort(key=lambda item: item[0], reverse=True)
     
     # Return top ranked tracks
     return [track for _, track in scored_candidates[:limit]]
+
