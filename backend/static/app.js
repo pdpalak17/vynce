@@ -7,6 +7,57 @@
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const escapeHtml = s => { const m = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s).replace(/[&<>"']/g,c=>m[c]); };
+function updateActiveSidebar() {
+  const hash = window.location.hash || '#/';
+  const [route, param] = hash.replace('#/', '').split('/');
+  $$('.sidebar-item').forEach(el => el.classList.remove('active'));
+  if (route === 'profile') {
+    $('#sidebar-link-profile')?.classList.add('active');
+    $('#sidebar-link-playlists')?.classList.add('active');
+  } else if (route === 'dashboard') {
+    if (state.currentSubpage === 'rooms') {
+      $('#sidebar-link-rooms')?.classList.add('active');
+    } else if (['romantic','sad','party','trending'].includes(state.currentSubpage)) {
+      $('#sidebar-link-radio')?.classList.add('active');
+    } else {
+      $('#sidebar-link-home')?.classList.add('active');
+    }
+  }
+}
+
+function renderTopCharts(tracks, listEl) {
+  listEl.innerHTML = '';
+  if (!tracks.length) {
+    listEl.innerHTML = '<p class="empty-hint">No tracks found</p>';
+    return;
+  }
+  tracks.slice(0, 3).forEach((t, i) => {
+    const item = document.createElement('div');
+    item.className = 'chart-item';
+    item.style.animationDelay = `${i*0.05}s`;
+    const durationText = t.duration ? formatTime(t.duration) : '3:30';
+    item.innerHTML = `
+      <div class="chart-item__left">
+        <img class="chart-item__art" src="${escapeHtml(t.album_art||'')}" alt="Cover" onerror="this.style.background='linear-gradient(135deg,#1a1a3e,#0a0a14)'" />
+        <div class="chart-item__info">
+          <span class="chart-item__title">${escapeHtml(t.title)}</span>
+          <span class="chart-item__artist">${escapeHtml(t.artist)}</span>
+        </div>
+      </div>
+      <div class="chart-item__right">
+        <span class="chart-item__duration">${durationText}</span>
+        <button class="chart-item__action" title="Play">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px; height:14px; display:block;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>`;
+    item.querySelector('.chart-item__action').addEventListener('click', e => {
+      e.stopPropagation();
+      playTrack(t);
+    });
+    item.addEventListener('click', () => playTrack(t));
+    listEl.appendChild(item);
+  });
+}
 const formatTime = s => { if(!s||!isFinite(s)) return '0:00'; return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`; };
 const debounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
 const nameColor = n => `hsl(${[...n].reduce((h,c)=>c.charCodeAt(0)+((h<<5)-h),0)%360},65%,55%)`;
@@ -449,6 +500,16 @@ function handleRoute() {
   $$('.page').forEach(el => el.style.display = 'none');
   $('#global-loader').style.display = 'none';
 
+  // Manage app layout visibility
+  const appLayout = $('#app-layout');
+  if (appLayout) {
+    if (state.token && route !== '') {
+      appLayout.style.display = 'flex';
+    } else {
+      appLayout.style.display = 'none';
+    }
+  }
+
   // Toggle global play bar visibility
   const pb = $('#global-player-bar');
   if (pb) {
@@ -460,6 +521,9 @@ function handleRoute() {
       document.body.classList.remove('has-playbar');
     }
   }
+  
+  updateActiveSidebar();
+
 
   switch (route) {
     case '': $('#landing-page').style.display = ''; break;
@@ -624,6 +688,8 @@ async function enterRoom(code) {
   state.currentRoom = data;
   const n = $('#room-name-display'); if (n) n.textContent = data.name;
   const c = $('#invite-code-display'); if (c) c.textContent = data.code;
+  const bn = $('#room-banner-name'); if (bn) bn.textContent = data.name;
+
   connectToRoom(code);
 }
 
@@ -1140,6 +1206,27 @@ function updateVolumeUI() {
 function renderQueue() {
   const c = $('#queue-list'); if(!c) return;
   c.innerHTML = '';
+  
+  // Update Room banner song count and cover art
+  const songCountEl = $('#room-banner-song-count');
+  if (songCountEl) {
+    const totalSongs = state.queue.length + (state.currentTrack ? 1 : 0);
+    songCountEl.textContent = `${totalSongs} song${totalSongs !== 1 ? 's' : ''}`;
+  }
+  const bannerArt = $('#room-banner-art');
+  const bannerPlaceholder = $('#room-banner-placeholder');
+  if (bannerArt && bannerPlaceholder) {
+    if (state.currentTrack && state.currentTrack.album_art) {
+      bannerArt.src = state.currentTrack.album_art;
+      bannerArt.style.display = '';
+      bannerPlaceholder.style.display = 'none';
+    } else {
+      bannerArt.src = '/static/assets/hero_banner.png';
+      bannerArt.style.display = '';
+      bannerPlaceholder.style.display = 'none';
+    }
+  }
+
   if(!state.queue.length) { c.innerHTML = '<p class="empty-hint">Queue is empty</p>'; return; }
   state.queue.forEach((t,i) => {
     const d = document.createElement('div'); d.className = 'queue-item';
@@ -1159,11 +1246,11 @@ function renderQueue() {
       }
       votingHtml = `
         <div class="queue-item-votes" style="display: flex; gap: 8px; margin-right: 12px; align-items: center; pointer-events: auto;">
-          <button class="vote-btn vote-up" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === 1 ? '#00E5FF' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Up" data-index="${i}" data-val="1">
+          <button class="vote-btn vote-up" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === 1 ? '#FACD66' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Up" data-index="${i}" data-val="1">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
             <span class="vote-count" style="font-size: 11px;">${ups}</span>
           </button>
-          <button class="vote-btn vote-down" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === -1 ? '#FF5252' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Down" data-index="${i}" data-val="-1">
+          <button class="vote-btn vote-down" style="background: none; border: none; cursor: pointer; padding: 2px; color: ${userVote === -1 ? '#FF3B30' : 'var(--text-3)'}; display: flex; align-items: center; gap: 4px;" title="Thumbs Down" data-index="${i}" data-val="-1">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
             <span class="vote-count" style="font-size: 11px;">${downs}</span>
           </button>
@@ -1172,11 +1259,18 @@ function renderQueue() {
     }
 
     d.innerHTML = `
-      <img class="queue-item-art" src="${escapeHtml(t.album_art||'')}" alt="" onerror="this.style.display='none'" />
-      <div class="queue-item-info"><span class="queue-item-title">${escapeHtml(t.title)}</span><span class="queue-item-artist">${escapeHtml(t.artist)}</span></div>
-      <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
-      ${votingHtml}
-      <button class="remove-queue-btn" title="Remove from Queue">&times;</button>`;
+      <span class="col-idx">${i + 1}</span>
+      <div class="queue-item-art-wrap">
+        <img class="queue-item-art" src="${escapeHtml(t.album_art||'')}" alt="" onerror="this.style.background='linear-gradient(135deg,#1a1a3e,#0a0a14)'" />
+        <span class="queue-item-title-text">${escapeHtml(t.title)}</span>
+      </div>
+      <span class="queue-item-artist-text">${escapeHtml(t.artist)}</span>
+      <div class="queue-item-actions-wrap">
+        <span style="font-size:12px;color:var(--text-3);margin-right:8px;">${formatTime(t.duration)}</span>
+        ${votingHtml}
+        <button class="remove-queue-btn" title="Remove from Queue">&times;</button>
+      </div>`;
+
 
     if (state.currentRoom) {
       d.querySelectorAll('.vote-btn').forEach(btn => {
@@ -1505,7 +1599,9 @@ function appendChatMessage(msg) {
 function renderListeners(users) {
   const c = $('#listeners-list'); if(!c) return; c.innerHTML = '';
   const lc = $('#listener-count-display'); if(lc) lc.textContent = users.length;
+  const blc = $('#room-banner-listeners'); if(blc) blc.textContent = `${users.length} listening`;
   users.forEach(u => {
+
     const color = nameColor(u.username);
     const el = document.createElement('div'); el.className = 'listener-item';
     el.innerHTML = `<div class="listener-avatar" style="background:${color}">${escapeHtml(u.username[0].toUpperCase())}</div><span>${escapeHtml(u.username)}</span>`;
@@ -1540,8 +1636,64 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-dropdown-profile')?.addEventListener('click', () => navigateTo('#/profile'));
   $('#btn-dropdown-logout')?.addEventListener('click', logout);
 
+  // Sidebar Navigation Click Handlers
+  $('#sidebar-link-home')?.addEventListener('click', e => {
+    e.preventDefault();
+    state.currentSubpage = 'home';
+    navigateTo('#/dashboard');
+  });
+  $('#sidebar-link-playlists')?.addEventListener('click', e => {
+    e.preventDefault();
+    navigateTo('#/profile');
+    setTimeout(() => {
+      const tabBtn = $('[data-tab="playlists"]');
+      if (tabBtn) tabBtn.click();
+    }, 50);
+  });
+  $('#sidebar-link-radio')?.addEventListener('click', e => {
+    e.preventDefault();
+    state.currentSubpage = 'romantic';
+    navigateTo('#/dashboard');
+  });
+  $('#sidebar-link-rooms')?.addEventListener('click', e => {
+    e.preventDefault();
+    state.currentSubpage = 'rooms';
+    navigateTo('#/dashboard');
+  });
+  $('#sidebar-link-profile')?.addEventListener('click', e => {
+    e.preventDefault();
+    navigateTo('#/profile');
+  });
+  $('#sidebar-link-shortcuts')?.addEventListener('click', e => {
+    e.preventDefault();
+    const modal = $('#shortcuts-modal');
+    if (modal) modal.style.display = 'flex';
+  });
+  $('#sidebar-link-logout')?.addEventListener('click', e => {
+    e.preventDefault();
+    logout();
+  });
+
+  // Mobile Menu Drawer Toggles
+  const toggleSidebar = () => {
+    const sidebar = $('#sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('sidebar-open');
+    }
+  };
+  $('#btn-mobile-menu-dash')?.addEventListener('click', toggleSidebar);
+  $('#btn-mobile-menu-room')?.addEventListener('click', toggleSidebar);
+  $('#btn-mobile-menu-profile')?.addEventListener('click', toggleSidebar);
+  
+  $$('.sidebar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      $('#sidebar')?.classList.remove('sidebar-open');
+    });
+  });
+
   // Create room
   const createRoomModal = $('#create-room-modal');
+
   $('#btn-open-create-room')?.addEventListener('click', () => { if(createRoomModal) createRoomModal.style.display = 'flex'; });
   $('#btn-create-room-close')?.addEventListener('click', () => { if(createRoomModal) createRoomModal.style.display = 'none'; });
   $('#create-room-form')?.addEventListener('submit', e => {
@@ -2562,7 +2714,36 @@ async function loadHomeSections() {
     } else if (section.title.includes('Party')) {
       targetContainer = partySection;
     } else if (section.title.includes('For You')) {
-      targetContainer = forYouSection;
+      const tracks = section.tracks || [];
+      if (tracks.length > 0) {
+        // A. Hero Banner
+        const heroTrack = tracks[0];
+        const bannerTitle = $('#home-hero-banner .hero-banner__title');
+        const bannerDesc = $('#home-hero-banner .hero-banner__desc');
+        if (bannerTitle && bannerDesc) {
+          bannerTitle.textContent = heroTrack.title;
+          bannerDesc.textContent = `Featuring ${heroTrack.artist} - from "${heroTrack.album || 'Single'}". Curated for you.`;
+        }
+        const playMixBtn = $('#btn-hero-play-mix');
+        if (playMixBtn) {
+          const newPlayMixBtn = playMixBtn.cloneNode(true);
+          playMixBtn.parentNode.replaceChild(newPlayMixBtn, playMixBtn);
+          newPlayMixBtn.addEventListener('click', () => {
+            playTrack(heroTrack);
+            tracks.slice(1).forEach(t => addToQueue(t));
+            showToast('Playing For You Mix', 'success');
+          });
+        }
+        
+        // B. Top Charts
+        const topChartsTracks = tracks.slice(1, 4);
+        renderTopCharts(topChartsTracks, $('#top-charts-list'));
+        
+        // C. New Releases
+        const newReleasesTracks = tracks.slice(4);
+        renderTracksInGrid(newReleasesTracks, $('#new-releases-grid'));
+      }
+      return;
     }
     
     if (targetContainer) {
@@ -2582,6 +2763,7 @@ async function loadHomeSections() {
       renderTracksInGrid(section.tracks || [], gridEl);
     }
   });
+
 }
 
 function renderTracksInGrid(tracks, gridEl, isHistory = false) {
