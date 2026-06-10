@@ -764,6 +764,37 @@ function loadTrack(track, startAt = 0, isRestore = false) {
     if (state.history.length > 50) state.history.shift();
   }
   state.currentTrack = track;
+  state.prefetchDone = false;
+
+  // Media Session API Integration
+  if ('mediaSession' in navigator && track) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || 'Unknown',
+      artist: track.artist || 'Unknown',
+      album: track.album || '',
+      artwork: track.album_art ? [{ src: track.album_art, sizes: '512x512', type: 'image/jpeg' }] : []
+    });
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      audio.play().catch(()=>{});
+      state.isPlaying = true;
+      updatePlaybackUI();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audio.pause();
+      state.isPlaying = false;
+      updatePlaybackUI();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      playNext();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      playPrev();
+    });
+    navigator.mediaSession.setActionHandler('seekto', (e) => {
+      seekTo(e.seekTime);
+    });
+  }
   try { audio.src = track.stream_url; audio.currentTime = startAt; } catch(e) { showToast('Could not load track', 'error'); return; }
   const t = $('#player-track-title'); if(t) t.textContent = track.title || 'Unknown';
   const a = $('#player-track-artist'); if(a) a.textContent = track.artist || 'Unknown';
@@ -999,6 +1030,12 @@ function setupAudioEvents(audioEl) {
     // Trigger crossfade 5 seconds before end if autoplay/next song is in queue, and not in a room
     if (audio.currentTime >= dur - 5 && !state.currentRoom && state.queue.length > 0 && !isCrossfading) {
       startCrossfade();
+    }
+
+    // Pre-fetch lyrics 5 seconds before current song ends
+    if (audio.currentTime >= dur - 5 && state.queue.length > 0 && !state.prefetchDone) {
+      state.prefetchDone = true;
+      prefetchNextLyrics(state.queue[0]);
     }
   });
 
@@ -1714,6 +1751,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else if(e.code === 'ArrowUp') { e.preventDefault(); setVolume(state.volume+0.05); }
     else if(e.code === 'ArrowDown') { e.preventDefault(); setVolume(state.volume-0.05); }
     else if(e.key === 'n' || e.key === 'N') { e.preventDefault(); playNext(); }
+    else if(e.key === 'p' || e.key === 'P') { e.preventDefault(); playPrev(); }
     else if(e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLikeCurrentTrack(); }
     else if(e.key === 'm' || e.key === 'M') {
       e.preventDefault();
@@ -1723,6 +1761,18 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         setVolume(state.preMuteVolume || 0.5);
       }
+    }
+    else if(e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      const ep = $('#expanded-player');
+      if (ep) {
+        if (ep.style.display === 'none') expandPlayer();
+        else collapsePlayer();
+      }
+    }
+    else if(e.key === '?') {
+      e.preventDefault();
+      showShortcutsModal();
     }
   });
 
@@ -1881,6 +1931,25 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(reg => console.log('[SW] Registered successfully', reg.scope))
       .catch(err => console.error('[SW] Registration failed', err));
   }
+
+  // Keyboard Shortcuts Modal wiring
+  function showShortcutsModal() {
+    const modal = $('#shortcuts-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+  function hideShortcutsModal() {
+    const modal = $('#shortcuts-modal');
+    if (modal) modal.style.display = 'none';
+  }
+  $('#btn-dropdown-shortcuts')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showShortcutsModal();
+    const dropdown = $('#user-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  });
+  $('#btn-shortcuts-close')?.addEventListener('click', hideShortcutsModal);
+  const scModal = $('#shortcuts-modal');
+  if (scModal) scModal.addEventListener('click', e => { if (e.target === scModal) hideShortcutsModal(); });
 
   updateVolumeUI(); updatePlaybackUI();
   console.log('[Vynce] v2 ready ✓');
@@ -2162,6 +2231,32 @@ function renderLyrics(rawLyrics) {
   }
 }
 
+async function prefetchNextLyrics(track) {
+  if (!track) return;
+  let lyricsText = "";
+  try {
+    const data = await api.get(`/api/music/song/${track.id}/lyrics`);
+    if (data && data.lyrics && !data.lyrics.includes("Lyrics not available")) {
+      lyricsText = data.lyrics;
+    }
+  } catch (err) {}
+  if (!lyricsText && track.artist && track.title) {
+    try {
+      const res = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(track.artist)}/${encodeURIComponent(track.title)}`);
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData && resData.lyrics) {
+          lyricsText = resData.lyrics;
+        }
+      }
+    } catch (err) {}
+  }
+  state.prefetchedLyrics = {
+    trackId: track.id,
+    lyrics: lyricsText || "Lyrics not available for this song. Enjoy the music!"
+  };
+}
+
 async function loadLyricsAndRelated() {
   const track = state.currentTrack;
   if (!track) return;
@@ -2169,15 +2264,43 @@ async function loadLyricsAndRelated() {
   const container = $('#lyrics-container');
   if (container) {
     container.innerHTML = '<p class="lyrics-text">Loading lyrics...</p>';
-    try {
-      const data = await api.get(`/api/music/song/${track.id}/lyrics`);
-      if (data && data.lyrics) {
-        renderLyrics(data.lyrics);
+    
+    if (state.prefetchedLyrics && state.prefetchedLyrics.trackId === track.id) {
+      if (state.prefetchedLyrics.lyrics) {
+        renderLyrics(state.prefetchedLyrics.lyrics);
       } else {
         renderLyrics("Lyrics not available for this song. Enjoy the music!");
       }
-    } catch (e) {
-      renderLyrics("Lyrics not available for this song. Enjoy the music!");
+    } else {
+      try {
+        let lyricsText = "";
+        try {
+          const data = await api.get(`/api/music/song/${track.id}/lyrics`);
+          if (data && data.lyrics && !data.lyrics.includes("Lyrics not available")) {
+            lyricsText = data.lyrics;
+          }
+        } catch (err) {}
+
+        if (!lyricsText && track.artist && track.title) {
+          try {
+            const res = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(track.artist)}/${encodeURIComponent(track.title)}`);
+            if (res.ok) {
+              const resData = await res.json();
+              if (resData && resData.lyrics) {
+                lyricsText = resData.lyrics;
+              }
+            }
+          } catch (ovhErr) {}
+        }
+
+        if (lyricsText) {
+          renderLyrics(lyricsText);
+        } else {
+          renderLyrics("Lyrics not available for this song. Enjoy the music!");
+        }
+      } catch (e) {
+        renderLyrics("Lyrics not available for this song. Enjoy the music!");
+      }
     }
   }
 
@@ -2207,7 +2330,7 @@ async function loadLyricsAndRelated() {
           relatedEl.innerHTML = '<p class="empty-hint">No recommendations available</p>';
         }
       } catch (ex) {
-        relatedEl.innerHTML = '<p class="empty-hint">Failed to load recommendations. <button class="btn btn-ghost btn-sm" onclick="loadLyricsAndRelated()">Retry</button></p>';
+        relatedEl.innerHTML = '<p class="empty-hint">Couldn\'t load recommendations. Try again. <button class="btn btn-ghost btn-sm" onclick="loadLyricsAndRelated()">Retry</button></p>';
       }
     }
   }

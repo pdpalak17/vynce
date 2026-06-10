@@ -7,7 +7,7 @@
   <title>Vynce — Listen Together</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css?v=2.8" />
+  <link rel="stylesheet" href="/static/styles.css?v=2.9" />
   <link rel="icon" href="/static/logo.png" type="image/png" />
 </head>
 <body>
@@ -177,6 +177,50 @@
     </div>
   </div>
 
+  <!-- Keyboard Shortcuts Help Modal -->
+  <div id="shortcuts-modal" class="modal-overlay" style="display:none;">
+    <div class="mini-modal">
+      <h3>Keyboard Shortcuts</h3>
+      <div style="margin: 15px 0; text-align: left; line-height: 1.8;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">Space</span>
+          <span style="color: var(--text-3);">Play / Pause</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">Arrow Right</span>
+          <span style="color: var(--text-3);">Seek Forward 10s</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">Arrow Left</span>
+          <span style="color: var(--text-3);">Seek Backward 10s</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">N</span>
+          <span style="color: var(--text-3);">Next Track</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">P</span>
+          <span style="color: var(--text-3);">Previous Track</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">M</span>
+          <span style="color: var(--text-3);">Toggle Mute</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">L</span>
+          <span style="color: var(--text-3);">Toggle Like</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 6px 0;">
+          <span style="font-weight: 500; color: #fff;">F</span>
+          <span style="color: var(--text-3);">Toggle Fullscreen Player</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-shortcuts-close" class="btn btn-primary btn-full">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════ 3. DASHBOARD ═══════════ -->
   <div id="dashboard-page" class="page dashboard" style="display:none;">
 
@@ -222,6 +266,7 @@
           </button>
           <div id="user-dropdown" class="dropdown-menu" style="display:none;">
             <button id="btn-dropdown-profile" class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile</button>
+            <button id="btn-dropdown-shortcuts" class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Keyboard Shortcuts</button>
             <button id="btn-dropdown-logout" class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</button>
           </div>
         </div>
@@ -689,6 +734,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=2.8"></script>
+  <script src="/static/app.js?v=2.9"></script>
 </body>
 </html>
