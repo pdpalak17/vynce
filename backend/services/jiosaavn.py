@@ -14,6 +14,44 @@ logger = logging.getLogger(__name__)
 
 _jio: Optional[JioSaavn] = None
 
+import time
+import functools
+import copy
+
+class AsyncTTLCache:
+    def __init__(self):
+        self._cache = {}
+
+    def __call__(self, ttl_seconds):
+        def decorator(func):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                key_parts = [func.__name__]
+                for arg in args:
+                    key_parts.append(str(arg))
+                for k, v in sorted(kwargs.items()):
+                    key_parts.append(f"{k}:{v}")
+                key = "|".join(key_parts)
+
+                now = time.time()
+                if key in self._cache:
+                    val, expiry = self._cache[key]
+                    if expiry is None or expiry > now:
+                        return copy.deepcopy(val)
+                    else:
+                        del self._cache[key]
+
+                result = await func(*args, **kwargs)
+                
+                if result:
+                    expiry = now + ttl_seconds
+                    self._cache[key] = (result, expiry)
+                return copy.deepcopy(result)
+            return wrapper
+        return decorator
+
+cache = AsyncTTLCache()
+
 
 def get_jio() -> JioSaavn:
     global _jio
@@ -65,6 +103,7 @@ def _parse_track(t: dict) -> dict:
     }
 
 
+@cache(1800)
 async def search_tracks(query: str, limit: int = 20) -> dict:
     """Search JioSaavn for tracks."""
     jio = get_jio()
@@ -81,6 +120,7 @@ async def search_tracks(query: str, limit: int = 20) -> dict:
         return {"tracks": [], "total": 0, "source": "jiosaavn"}
 
 
+@cache(1800)
 async def search_albums(query: str, limit: int = 10) -> dict:
     """Search JioSaavn for albums."""
     jio = get_jio()
@@ -106,6 +146,7 @@ async def search_albums(query: str, limit: int = 10) -> dict:
         return {"albums": [], "total": 0}
 
 
+@cache(7200)
 async def get_album_tracks(album_id: str) -> dict:
     """Get all tracks from a JioSaavn album."""
     jio = get_jio()
@@ -132,6 +173,7 @@ async def get_album_tracks(album_id: str) -> dict:
         return {"tracks": [], "total": 0}
 
 
+@cache(1800)
 async def get_trending(limit: int = 20, language: str = "hindi") -> dict:
     """Get trending songs from JioSaavn."""
     import random
@@ -196,6 +238,7 @@ async def get_trending(limit: int = 20, language: str = "hindi") -> dict:
     }
 
 
+@cache(1800)
 async def get_new_releases(limit: int = 20, language: str = "hindi") -> dict:
     """Get new releases from JioSaavn homepage new albums."""
     import random
@@ -248,6 +291,7 @@ async def get_new_releases(limit: int = 20, language: str = "hindi") -> dict:
     }
 
 
+@cache(7200)
 async def get_song_details(song_id: str) -> dict:
     """Get full details + stream URL for a specific song."""
     jio = get_jio()
@@ -303,6 +347,7 @@ def extract_title_keywords(title: str) -> str:
     return " ".join(words[:3])
 
 
+@cache(1800)
 async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
     """Get similar tracks for a song, preferring same album, artist, and language."""
     import re
@@ -473,6 +518,7 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
     }
 
 
+@cache(1800)
 async def get_artist_details(artist_id: str, song_limit: int = 20, album_limit: int = 10) -> dict:
     """Fetch top songs and albums for a specific artist."""
     jio = get_jio()
@@ -516,6 +562,7 @@ async def get_artist_details(artist_id: str, song_limit: int = 20, album_limit: 
         return {}
 
 
+@cache(86400)
 async def get_lyrics(song_id: str) -> Optional[str]:
     """Fetch lyrics for a song from JioSaavn."""
     jio = get_jio()
