@@ -1756,6 +1756,7 @@ body.has-playbar {
   flex-direction: column;
   justify-content: center;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 .hero-banner::after {
   content: '';
@@ -1798,6 +1799,7 @@ body.has-playbar {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .btn-play-mix {
   background: var(--accent) !important;
@@ -1824,6 +1826,7 @@ body.has-playbar {
 .top-charts-card {
   background: transparent;
   width: 100%;
+  min-width: 0;
 }
 .top-charts-list {
   display: flex;
