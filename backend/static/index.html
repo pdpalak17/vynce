@@ -7,7 +7,7 @@
   <title>Vynce — Listen Together</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css?v=2.9" />
+  <link rel="stylesheet" href="/static/styles.css?v=3.0" />
   <link rel="icon" href="/static/logo.png" type="image/png" />
 </head>
 <body>
@@ -221,20 +221,70 @@
     </div>
   </div>
 
+  <!-- ═══════════ MAIN APPLICATION LAYOUT ═══════════ -->
+  <div id="app-layout" class="app-layout" style="display: none;">
+    
+    <!-- Left Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar__brand">
+        <img src="/static/logo.png" alt="Vynce Logo" class="brand-logo-img" />
+        <span class="brand-logo-text">Vynce</span>
+      </div>
+      
+      <nav class="sidebar__nav">
+        <div class="nav-group">
+          <span class="nav-group-title">Menu</span>
+          <a href="#/dashboard" id="sidebar-link-home" class="sidebar-item active" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="sidebar-text">Home</span>
+          </a>
+          <a href="#/profile" id="sidebar-link-playlists" class="sidebar-item" title="My Collections">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            <span class="sidebar-text">Playlists</span>
+          </a>
+          <a href="#/dashboard" id="sidebar-link-radio" class="sidebar-item" title="Radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="sidebar-text">Radio</span>
+          </a>
+          <a href="#/dashboard" id="sidebar-link-rooms" class="sidebar-item" title="Public Rooms">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="sidebar-text">Rooms</span>
+          </a>
+        </div>
+        
+        <div class="nav-group">
+          <span class="nav-group-title">Profile</span>
+          <a href="#/profile" id="sidebar-link-profile" class="sidebar-item" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="sidebar-text">Profile</span>
+          </a>
+          <button id="sidebar-link-shortcuts" class="sidebar-item btn-sidebar-action" title="Keyboard Shortcuts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="sidebar-text">Shortcuts</span>
+          </button>
+          <button id="sidebar-link-logout" class="sidebar-item btn-sidebar-action" title="Log Out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span class="sidebar-text">Logout</span>
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area next to Sidebar -->
+    <div id="main-content-area" class="main-content-area">
   <!-- ═══════════ 3. DASHBOARD ═══════════ -->
   <div id="dashboard-page" class="page dashboard" style="display:none;">
 
     <!-- Floating Page Switchers (Left & Right Sides) -->
-    <button id="btn-sub-nav-prev" class="floating-nav-btn prev-btn" title="Previous Page">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <button id="btn-sub-nav-next" class="floating-nav-btn next-btn" title="Next Page">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
+    
+    
 
     <!-- Dashboard Header -->
     <header class="dash-header">
       <div class="dash-header__left">
+        <button id="btn-mobile-menu-dash" class="mobile-menu-btn" aria-label="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <div class="dash-logo-wrap" style="display: flex; align-items: center; gap: 8px;">
           <img src="/static/logo.png" alt="Vynce Logo" class="brand-logo-img" style="height: 32px; width: 32px;" />
           <span class="dash-logo" style="font-weight: 800; font-size: 1.5rem; letter-spacing: -0.5px;">Vynce</span>
@@ -284,54 +334,55 @@
         <div id="search-results" class="tracks-grid"></div>
       </section>
 
-      <!-- Dashboard sub-navigation / page switcher -->
-      <div class="sub-nav-bar">
-        <div class="sub-nav-links">
-          <button class="sub-nav-btn active" data-subpage="home">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Home
-          </button>
-          <button class="sub-nav-btn" data-subpage="trending">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><polyline points="17 7 22 7 22 12"/></svg>
-            Trending
-          </button>
-          <button class="sub-nav-btn" data-subpage="romantic">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-            Romantic
-          </button>
-          <button class="sub-nav-btn" data-subpage="sad">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
-            Sad
-          </button>
-          <button class="sub-nav-btn" data-subpage="party">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-            Party
-          </button>
-          <button class="sub-nav-btn" data-subpage="rooms">
-            <svg class="sub-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Public Rooms
-          </button>
-        </div>
-      </div>
-
       <!-- 1. HOME SUBPAGE -->
       <div id="subpage-home" class="subpage-container active">
-        <!-- Recently Played -->
-        <div id="section-recently-played"></div>
-
-        <!-- For You Mix -->
-        <div id="section-for-you">
-          <section class="dash-section">
-            <h2 class="section-title">For You Mix</h2>
-            <div class="tracks-grid">
-              <div class="track-skeleton"></div>
-              <div class="track-skeleton"></div>
-              <div class="track-skeleton"></div>
-              <div class="track-skeleton"></div>
+        <!-- Two-column Row for Hero and Top Charts -->
+        <div class="home-layout-grid">
+          <!-- Hero Banner -->
+          <div id="home-hero-banner" class="hero-banner">
+            <div class="hero-banner__content">
+              <span class="hero-banner__tag">Curated Playlist</span>
+              <h2 class="hero-banner__title">For You Mix</h2>
+              <p class="hero-banner__desc">Personalized music recommendations based on your listening history.</p>
+              <div class="hero-banner__actions">
+                <button id="btn-hero-play-mix" class="btn btn-primary btn-play-mix">
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="btn-svg"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play All
+                </button>
+                <button class="btn btn-ghost btn-like-mix">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                  <span id="hero-banner-likes-count">32k Likes</span>
+                </button>
+              </div>
             </div>
-          </section>
+            <div class="hero-banner__graphic">
+              <!-- Animated waves/art details handled by CSS background -->
+            </div>
+          </div>
+          
+          <!-- Top Charts Column -->
+          <div class="top-charts-card">
+            <h2 class="section-title">Top Charts</h2>
+            <div id="top-charts-list" class="top-charts-list">
+              <div class="track-skeleton" style="height:64px; margin-bottom:10px;"></div>
+              <div class="track-skeleton" style="height:64px; margin-bottom:10px;"></div>
+              <div class="track-skeleton" style="height:64px;"></div>
+            </div>
+          </div>
         </div>
 
+        <!-- New Releases -->
+        <section class="dash-section" style="margin-top:32px;">
+          <h2 class="section-title">New Releases</h2>
+          <div id="new-releases-grid" class="tracks-grid">
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+            <div class="track-skeleton"></div>
+          </div>
+        </section>
+
+        <!-- Recently Played -->
+        <div id="section-recently-played" style="margin-top:32px;"></div>
         <!-- Quick Genres -->
         <section class="dash-section">
           <h2 class="section-title">Browse by Mood</h2>
@@ -408,6 +459,9 @@
     <!-- Room Header -->
     <header class="room-header">
       <div class="room-header__left">
+        <button id="btn-mobile-menu-room" class="mobile-menu-btn" aria-label="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <button id="btn-leave-room" class="btn btn-ghost btn-sm">← Leave</button>
         <h2 id="room-name-display" class="room-title">Room</h2>
       </div>
@@ -424,6 +478,32 @@
     <div class="room-body">
       <!-- Left: Player + Search + Queue -->
       <div class="room-main">
+        <!-- Room Detail Banner -->
+        <div class="room-banner">
+          <div class="room-banner__cover">
+            <img id="room-banner-art" src="/static/assets/hero_banner.png" alt="Room Cover" />
+            <div id="room-banner-placeholder" class="room-banner-placeholder" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px; height:48px; opacity:0.3;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          </div>
+          <div class="room-banner__meta">
+            <h2 id="room-banner-name" class="room-banner__title">Room Name</h2>
+            <p id="room-banner-desc" class="room-banner__desc">Synchronized music listening room. Share music, queue up tracks, and chat live.</p>
+            <div class="room-banner__stats">
+              <span id="room-banner-song-count">0 songs</span>
+              <span class="dot-separator">&middot;</span>
+              <span id="room-banner-listeners">0 listening</span>
+            </div>
+            <div class="room-banner__actions">
+              <button id="btn-room-play-all" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="btn-svg" style="width:14px; height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play All
+              </button>
+              <button id="btn-room-like" class="btn btn-ghost">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg" style="width:14px; height:14px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                <span>Add to collection</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
 
 
 
@@ -440,6 +520,12 @@
         <!-- Queue -->
         <div class="queue-section">
           <h4 class="queue-title">Up Next</h4>
+          <div class="queue-table-header">
+            <span class="col-idx">#</span>
+            <span class="col-title">Title</span>
+            <span class="col-artist">Artist</span>
+            <span class="col-actions">Actions</span>
+          </div>
           <div id="queue-list" class="queue-list">
             <p class="empty-hint">Queue is empty — search and add songs</p>
           </div>
@@ -468,6 +554,9 @@
   <!-- ═══════════ 5. PROFILE PAGE ═══════════ -->
   <div id="profile-page" class="page" style="display:none;">
     <header class="dash-header">
+        <button id="btn-mobile-menu-profile" class="mobile-menu-btn" aria-label="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       <button id="btn-profile-back" class="btn btn-ghost btn-sm">← Dashboard</button>
       <span class="dash-logo">Vynce</span>
       <div></div>
@@ -514,6 +603,9 @@
         </section>
       </div>
     </main>
+  </div>
+
+    </div>
   </div>
 
   <!-- ═══════════ 6. GLOBAL PLAY BAR ═══════════ -->
@@ -734,6 +826,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=2.9"></script>
+  <script src="/static/app.js?v=3.0"></script>
 </body>
 </html>
