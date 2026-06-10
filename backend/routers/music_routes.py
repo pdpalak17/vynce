@@ -111,6 +111,43 @@ async def get_by_genre(
     return await jiosaavn.search_tracks(f"{genre} songs", limit=limit)
 
 
+def get_user_genres_from_history(history_list: list, liked_list: list) -> list:
+    import random
+    detected = set()
+    all_items = history_list + liked_list
+    for item in all_items:
+        title = (item.get("track_title") or item.get("title") or "").lower()
+        artist = (item.get("track_artist") or item.get("artist") or "").lower()
+        
+        if any(kw in title for kw in ["love", "romantic", "pyar", "dil", "ishq", "sanam"]):
+            detected.add("romantic hindi")
+        if any(kw in title for kw in ["sad", "judai", "dard", "tuta", "rua"]):
+            detected.add("sad hindi songs")
+        if any(kw in title for kw in ["party", "dance", "club", "dj", "nach"]):
+            detected.add("hindi party dance")
+        if any(kw in title or kw in artist for kw in ["punjabi", "singh", "dhillon", "sidhu", "diljit"]):
+            detected.add("punjabi")
+        if "lofi" in title or "lo-fi" in title or "lofi" in artist:
+            detected.add("hindi lofi")
+        if "sufi" in title or "sufi" in artist or any(kw in title for kw in ["maula", "khuda", "ali"]):
+            detected.add("sufi")
+        if any(kw in title or kw in artist for kw in ["90s", "classic", "old", "kishore", "lata", "rafi"]):
+            detected.add("90s bollywood")
+
+    fallback_genres = ["romantic hindi", "sad hindi songs", "hindi party dance", "hindi lofi", "punjabi", "sufi", "90s bollywood"]
+    detected_list = list(detected)
+    random.shuffle(detected_list)
+    
+    for g in fallback_genres:
+        if len(detected_list) >= 4:
+            break
+        if g not in detected_list:
+            detected_list.append(g)
+            
+    random.shuffle(detected_list)
+    return detected_list[:4]
+
+
 @router.get("/home", response_model=list[HomeSectionResponse])
 async def get_home_page(
     user: User = Depends(get_current_user),
@@ -166,15 +203,21 @@ async def get_home_page(
         if fallback not in seed_queries:
             seed_queries.append(fallback)
 
+    # Dynamic Seeding from history genres/moods
+    user_genres = get_user_genres_from_history(history_list, liked_list)
+
     # Standard sections + Seeded sections
     tasks = [
-        jiosaavn.get_trending(limit=12),
-        jiosaavn.search_tracks("romantic hindi", limit=12),
-        jiosaavn.search_tracks("sad hindi songs", limit=12),
-        jiosaavn.search_tracks("hindi party dance", limit=12),
+        jiosaavn.get_trending(limit=15, language="hindi"),
+        jiosaavn.search_tracks("romantic hindi", limit=15),
+        jiosaavn.search_tracks("sad hindi songs", limit=15),
+        jiosaavn.search_tracks("hindi party dance", limit=15),
+        jiosaavn.get_new_releases(limit=30, language="hindi"),
     ]
     for sq in seed_queries:
         tasks.append(jiosaavn.search_tracks(sq, limit=12))
+    for ug in user_genres:
+        tasks.append(jiosaavn.search_tracks(ug, limit=12))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     
@@ -182,11 +225,14 @@ async def get_home_page(
     romantic = results[1] if not isinstance(results[1], Exception) else {"tracks": []}
     sad = results[2] if not isinstance(results[2], Exception) else {"tracks": []}
     party = results[3] if not isinstance(results[3], Exception) else {"tracks": []}
+    new_releases = results[4] if not isinstance(results[4], Exception) else {"tracks": []}
     
     # Collect candidate pool from all sections to run recommendation scoring
     all_tracks = []
-    for r in results:
-        if not isinstance(r, Exception) and r.get("tracks"):
+    # Mix in tasks from results 0-3 and the custom history/genre search tasks (index 5 onwards)
+    # We do NOT mix the raw new_releases directly into general MLP scoring to avoid duplicates
+    for idx, r in enumerate(results):
+        if idx != 4 and not isinstance(r, Exception) and r.get("tracks"):
             all_tracks.extend(r["tracks"])
     
     seen_ids = set()
@@ -215,14 +261,22 @@ async def get_home_page(
             print(f"[Recommender-CoPlay] Error fetching co-play weights: {ex}")
 
     # Get personalized For You tracks using the neural network
-    for_you = recommend_tracks(
+    # We only need the top 4 tracks for Hero Banner and Top Charts
+    personalized_candidates = recommend_tracks(
         history_tracks=history_list,
         liked_tracks=liked_list,
         disliked_ids=disliked_ids,
         candidate_tracks=unique_tracks,
         co_play_weights=co_play_weights,
-        limit=12
+        limit=4
     )
+    
+    # Shuffle new releases and filter out disliked
+    fresh_releases = [t for t in new_releases.get("tracks", []) if t["id"] not in disliked_ids]
+    random.shuffle(fresh_releases)
+    
+    # Combine: First 4 are personalized, followed by dynamic new releases
+    for_you = personalized_candidates + fresh_releases
     
     def shuffle_list(lst):
         l = list(lst)

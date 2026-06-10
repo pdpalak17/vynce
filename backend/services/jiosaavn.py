@@ -7,6 +7,7 @@ Uses the local jiosaavnpy library directly.
 import logging
 from typing import Optional
 import anyio
+import asyncio
 from jiosaavnpy import JioSaavn
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ def get_jio() -> JioSaavn:
             "Client-IP": indian_ip,
             "Accept-Language": "en-US,en;q=0.9",
         })
+        # Patch HOME_DETAILS_URL to use web6dot0 context so that new_trending and new_albums are returned
+        _jio.endpoints.HOME_DETAILS_URL = _jio.endpoints.HOME_DETAILS_URL.replace("ctx=wap6dot0", "ctx=web6dot0")
     return _jio
 
 
@@ -131,32 +134,116 @@ async def get_album_tracks(album_id: str) -> dict:
 
 async def get_trending(limit: int = 20, language: str = "hindi") -> dict:
     """Get trending songs from JioSaavn."""
+    import random
     jio = get_jio()
     tracks = []
+    seen_ids = set()
+    
     try:
-        lang_capitalized = language.capitalize()
-        home_data = await anyio.to_thread.run_sync(jio.get_home, lang_capitalized)
+        # Lowercase language is crucial because getLaunchData is case-sensitive for new_trending
+        lang_lower = language.lower().strip()
+        home_data = await anyio.to_thread.run_sync(jio.get_home, lang_lower)
+        
+        # 1. Extract tracks of type="song" from now_trending
         now_trending = home_data.get("now_trending", [])
         for item in now_trending:
             if isinstance(item, dict) and item.get("track_id"):
-                tracks.append(_parse_track(item))
-                if len(tracks) >= limit:
-                    break
+                track = _parse_track(item)
+                if track["id"] not in seen_ids:
+                    seen_ids.add(track["id"])
+                    tracks.append(track)
+                    
+        # 2. If we need more tracks, fetch them from the top charts playlists returned on home page
+        if len(tracks) < limit:
+            charts = home_data.get("top_charts", [])
+            playlist_tasks = []
+            for c in charts[:2]:
+                pid = c.get("playlist_id")
+                if pid:
+                    playlist_tasks.append(anyio.to_thread.run_sync(jio.playlist_info, pid))
+            if playlist_tasks:
+                playlist_results = await asyncio.gather(*playlist_tasks, return_exceptions=True)
+                for playlist_res in playlist_results:
+                    if not isinstance(playlist_res, Exception) and playlist_res.get("tracks"):
+                        for song in playlist_res["tracks"]:
+                            track = _parse_track(song)
+                            if track["id"] not in seen_ids:
+                                seen_ids.add(track["id"])
+                                tracks.append(track)
     except Exception as e:
         logger.warning(f"JioSaavn get_home failed: {e}. Falling back to search.")
 
-    if not tracks:
-        # Fallback: search popular Hindi songs
+    if len(tracks) < limit:
+        # Fallback: search popular latest songs
         try:
-            query = "Latest Hindi Songs" if language.lower() == "hindi" else "Latest Hits"
-            results = await anyio.to_thread.run_sync(jio.search_songs, query, limit)
-            tracks = [_parse_track(t) for t in results]
+            query = f"Latest {language} Songs" if language.lower() in ["hindi", "punjabi", "tamil", "telugu"] else "Latest Hits"
+            results = await anyio.to_thread.run_sync(jio.search_songs, query, limit * 2)
+            for t in results:
+                track = _parse_track(t)
+                if track["id"] not in seen_ids:
+                    seen_ids.add(track["id"])
+                    tracks.append(track)
         except Exception as ex:
-            logger.error(f"JioSaavn trending fallback error: {ex}")
+            logger.error(f"JioSaavn trending fallback search error: {ex}")
+
+    # Shuffle to introduce dynamic variation on each call
+    random.shuffle(tracks)
 
     return {
-        "tracks": tracks,
-        "total": len(tracks),
+        "tracks": tracks[:limit],
+        "total": len(tracks[:limit]),
+        "source": "jiosaavn",
+    }
+
+
+async def get_new_releases(limit: int = 20, language: str = "hindi") -> dict:
+    """Get new releases from JioSaavn homepage new albums."""
+    import random
+    jio = get_jio()
+    tracks = []
+    seen_ids = set()
+    
+    try:
+        lang_lower = language.lower().strip()
+        home_data = await anyio.to_thread.run_sync(jio.get_home, lang_lower)
+        albums = home_data.get("new_albums", [])
+        
+        # Concurrently fetch tracks from the top 6 new albums
+        album_tasks = []
+        for a in albums[:6]:
+            album_id = a.get("album_id")
+            if album_id:
+                album_tasks.append(get_album_tracks(album_id))
+                
+        if album_tasks:
+            album_results = await asyncio.gather(*album_tasks, return_exceptions=True)
+            for album_res in album_results:
+                if not isinstance(album_res, Exception) and album_res.get("tracks"):
+                    for t in album_res["tracks"]:
+                        if t["id"] not in seen_ids:
+                            seen_ids.add(t["id"])
+                            tracks.append(t)
+    except Exception as e:
+        logger.warning(f"Error fetching new releases from homepage: {e}")
+
+    # Fallback to search if we didn't get enough tracks
+    if len(tracks) < limit:
+        try:
+            query = f"New {language} Releases" if language.lower() in ["hindi", "punjabi", "tamil", "telugu"] else "New Releases"
+            search_res = await search_tracks(query, limit=limit * 2)
+            for t in search_res.get("tracks", []):
+                if t["id"] not in seen_ids:
+                    seen_ids.add(t["id"])
+                    tracks.append(t)
+        except Exception as ex:
+            logger.error(f"New releases fallback search error: {ex}")
+
+    # Shuffle to ensure freshness on every page load
+    random.shuffle(tracks)
+    
+    return {
+        "tracks": tracks[:limit],
+        "total": len(tracks[:limit]),
         "source": "jiosaavn",
     }
 
@@ -203,20 +290,39 @@ def detect_emotion(title: str) -> str:
     return "neutral"
 
 
-async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
-    """Get similar tracks for a song, preferring same language and same emotion."""
+def extract_title_keywords(title: str) -> str:
+    """Extract clean keywords from song title for searching related tracks."""
     import re
+    # Remove contents in parentheses or brackets
+    clean_title = re.sub(r'[\(\[][^\)\]]*[\)\]]', '', title)
+    # Remove special characters
+    clean_title = re.sub(r'[^a-zA-Z0-9\s]', '', clean_title)
+    # Keep words longer than 2 characters
+    words = [w for w in clean_title.split() if len(w) > 2]
+    # Return first 3 keywords joined by space
+    return " ".join(words[:3])
+
+
+async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
+    """Get similar tracks for a song, preferring same album, artist, and language."""
+    import re
+    import random
     jio = get_jio()
     
     # 1. Get original song details
     song_info = await get_song_details(song_id)
-    original_title = song_info.get("title", "") if song_info else ""
-    original_language = song_info.get("language", "").strip().lower() if song_info else ""
-    original_emotion = detect_emotion(original_title) if original_title else "neutral"
+    if not song_info:
+        # Fall back to trending if song info could not be fetched
+        trending_res = await get_trending(limit=limit)
+        return trending_res
+        
+    original_title = song_info.get("title", "")
+    original_language = song_info.get("language", "").strip().lower()
+    original_emotion = detect_emotion(original_title)
     original_artists = []
-    original_album = song_info.get("album", "") if song_info else ""
+    original_album = song_info.get("album", "")
     
-    if song_info and song_info.get("artist"):
+    if song_info.get("artist"):
         artists_str = song_info["artist"]
         for part in re.split(r'[,&]|\bfeat\b', artists_str):
             name = part.strip()
@@ -252,10 +358,11 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
     # 2. Gather candidate pools
     pool_similar = []
     pool_album = []
-    pool_artists = {}
+    pool_artists = []
+    pool_title_search = []
     pool_trending = []
 
-    # A. Native similar_songs
+    # A. Native similar_songs (just in case)
     try:
         results = await anyio.to_thread.run_sync(jio.similar_songs, song_id)
         if results:
@@ -275,71 +382,43 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
         except Exception as e:
             logger.warning(f"Failed to get album tracks: {e}")
 
-    # C. Artists
-    for artist_name in original_artists[:3]:
-        try:
-            search_res = await search_tracks(artist_name, limit=15)
-            tracks = search_res.get("tracks", [])
-            if tracks:
-                pool_artists[artist_name] = tracks
-        except Exception as e:
-            logger.warning(f"Failed to search artist '{artist_name}': {e}")
+    # C. Artists (Concurrently fetch tracks for up to 2 artists)
+    artist_tasks = []
+    for artist_name in original_artists[:2]:
+        artist_tasks.append(search_tracks(artist_name, limit=15))
+    if artist_tasks:
+        artist_results = await asyncio.gather(*artist_tasks, return_exceptions=True)
+        for search_res in artist_results:
+            if not isinstance(search_res, Exception) and search_res.get("tracks"):
+                pool_artists.extend(search_res["tracks"])
 
-    # D. Trending
+    # D. Title Keywords Search
+    title_keywords = extract_title_keywords(original_title)
+    if title_keywords:
+        try:
+            search_res = await search_tracks(title_keywords, limit=15)
+            pool_title_search = search_res.get("tracks", [])
+        except Exception as e:
+            logger.warning(f"Failed to search title keywords '{title_keywords}': {e}")
+
+    # E. Trending (Used as low priority fallback filler)
     try:
-        trending_res = await get_trending(limit=30, language=original_language if original_language else "hindi")
+        trending_res = await get_trending(limit=20, language=original_language if original_language else "hindi")
         pool_trending = trending_res.get("tracks", [])
     except Exception as e:
-        logger.warning(f"Failed to get trending: {e}")
+        logger.warning(f"Failed to get trending for similarity fallback: {e}")
 
-    # 3. Interleave candidates
-    candidates = []
+    # 3. Score and Filter candidates
+    similar_ids = {t["id"] for t in pool_similar if "id" in t}
+    album_ids = {t["id"] for t in pool_album if "id" in t}
+    artist_ids = {t["id"] for t in pool_artists if "id" in t}
+    title_search_ids = {t["id"] for t in pool_title_search if "id" in t}
     
-    max_iterations = max(
-        len(pool_similar),
-        len(pool_album),
-        sum(len(v) for v in pool_artists.values()),
-        len(pool_trending)
-    )
-    
-    similar_idx = 0
-    album_idx = 0
-    artist_indices = {name: 0 for name in pool_artists}
-    trending_idx = 0
-    
-    for _ in range(max_iterations):
-        added = False
-        
-        if similar_idx < len(pool_similar):
-            candidates.append(pool_similar[similar_idx])
-            similar_idx += 1
-            added = True
-            
-        if album_idx < len(pool_album):
-            candidates.append(pool_album[album_idx])
-            album_idx += 1
-            added = True
-            
-        for name in pool_artists:
-            idx = artist_indices[name]
-            if idx < len(pool_artists[name]):
-                candidates.append(pool_artists[name][idx])
-                artist_indices[name] = idx + 1
-                added = True
-                
-        if trending_idx < len(pool_trending):
-            candidates.append(pool_trending[trending_idx])
-            trending_idx += 1
-            added = True
-            
-        if not added:
-            break
-
-    # 4. Deduplicate and exclude
+    all_candidates = []
     seen_ids = {song_id}
     seen_titles = [original_title]
-    unique_candidates = []
-    for t in candidates:
+    
+    for t in (pool_similar + pool_album + pool_artists + pool_title_search + pool_trending):
         track_id = t.get("id")
         title = t.get("title", "")
         if track_id and track_id not in seen_ids:
@@ -351,31 +430,41 @@ async def get_similar_tracks(song_id: str, limit: int = 10) -> dict:
             if not is_dup:
                 seen_ids.add(track_id)
                 seen_titles.append(title)
-                unique_candidates.append(t)
+                all_candidates.append(t)
 
-    # 5. Filter and Score
-    filtered_scored_tracks = []
-    for t in unique_candidates:
-        lang = t.get("language", "").strip().lower()
+    scored_tracks = []
+    for t in all_candidates:
+        cand_lang = t.get("language", "").strip().lower()
         title = t.get("title", "")
         
-        if original_language and lang and lang != original_language:
+        # Strict language matching
+        if original_language and cand_lang and cand_lang != original_language:
             continue
             
-        candidate_emotion = detect_emotion(title)
+        score = 0.0
         
-        score = 0
-        if candidate_emotion == original_emotion and original_emotion != "neutral":
-            score = 3
-        elif original_emotion == "neutral" or candidate_emotion == "neutral":
-            score = 2
-        else:
-            score = 1
+        if t["id"] in similar_ids:
+            score += 8.0
+        if t["id"] in album_ids:
+            score += 5.0
+        if t["id"] in artist_ids:
+            score += 3.0
+        if t["id"] in title_search_ids:
+            score += 2.0
             
-        filtered_scored_tracks.append((score, t))
+        if original_language and cand_lang == original_language:
+            score += 2.0
+            
+        candidate_emotion = detect_emotion(title)
+        if candidate_emotion == original_emotion and original_emotion != "neutral":
+            score += 0.5
+            
+        score += random.uniform(-0.1, 0.1)
+        
+        scored_tracks.append((score, t))
 
-    filtered_scored_tracks.sort(key=lambda x: x[0], reverse=True)
-    final_tracks = [item[1] for item in filtered_scored_tracks]
+    scored_tracks.sort(key=lambda x: x[0], reverse=True)
+    final_tracks = [item[1] for item in scored_tracks]
 
     return {
         "tracks": final_tracks[:limit],
