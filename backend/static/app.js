@@ -473,6 +473,12 @@ api.delete = p => api('DELETE', p);
 /* ═══════ TOAST ═══════ */
 function showToast(message, type = 'info') {
   const c = $('#toast-container'); if (!c) return;
+  const activeToasts = c.querySelectorAll('.toast');
+  if (activeToasts.length >= 3) {
+    for (let i = 0; i <= activeToasts.length - 3; i++) {
+      activeToasts[i].remove();
+    }
+  }
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
   t.innerHTML = `<span>${escapeHtml(message)}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
@@ -1553,13 +1559,15 @@ function playTrack(track) {
   }
 }
 
-function addToQueue(track) {
+function addToQueue(track, silent = false) {
   if (track && track.id) {
     state.removedTrackIds.delete(track.id);
   }
   state.queue.push(track); renderQueue();
   if(state.currentRoom) sendWS('queue_update', {queue:state.queue});
-  showToast(`Added "${track.title}" to queue`, 'success');
+  if (!silent) {
+    showToast(`Added "${track.title}" to queue`, 'success');
+  }
   ensureQueueFilled();
 }
 
@@ -2730,7 +2738,7 @@ async function loadHomeSections() {
           playMixBtn.parentNode.replaceChild(newPlayMixBtn, playMixBtn);
           newPlayMixBtn.addEventListener('click', () => {
             playTrack(heroTrack);
-            tracks.slice(1).forEach(t => addToQueue(t));
+            tracks.slice(1).forEach(t => addToQueue(t, true));
             showToast('Playing For You Mix', 'success');
           });
         }
