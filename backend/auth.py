@@ -141,3 +141,44 @@ def verify_email_existence(email: str) -> tuple[bool, str]:
             
     return True, ""
 
+
+def send_verification_email(email: str, code: str):
+    """
+    Sends verification email if SMTP environment variables are configured.
+    Otherwise, logs the code to the console.
+    """
+    import os
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = os.getenv("SMTP_PORT")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_sender = os.getenv("SMTP_SENDER", smtp_user)
+
+    subject = "Vynce Account Verification Code"
+    body = f"Your Vynce verification code is: {code}\nThis code will expire in 10 minutes."
+    message = f"Subject: {subject}\n\n{body}"
+
+    # Print to logs for developer visibility
+    logger.info("==================================================")
+    logger.info(f"[EMAIL VERIFICATION CODE] FOR {email}: {code}")
+    logger.info("==================================================")
+
+    if smtp_host and smtp_port and smtp_user and smtp_password:
+        try:
+            port = int(smtp_port)
+            if port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, port, timeout=10)
+            else:
+                server = smtplib.SMTP(smtp_host, port, timeout=10)
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+            
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_sender, [email], message)
+            server.quit()
+            logger.info(f"Verification email successfully sent to {email}")
+        except Exception as e:
+            logger.error(f"Failed to send verification email to {email}: {e}")
+
+

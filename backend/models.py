@@ -27,6 +27,9 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False, index=True)
     hashed_password = Column(String(256), nullable=False)
     avatar_url = Column(String(500), default="")
+    is_verified = Column(Boolean, default=False)
+    verification_code = Column(String(10), nullable=True)
+    verification_code_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     rooms = relationship("Room", back_populates="creator", lazy="selectin")

@@ -34,6 +34,17 @@ async def init_db():
     """Create all tables on startup."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Execute ALTER TABLE queries for existing PostgreSQL tables to add new columns
+        if engine.url.drivername.startswith("postgresql"):
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+            )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(10);"
+            )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMP;"
+            )
 
 
 async def get_db():

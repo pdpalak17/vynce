@@ -38,6 +38,17 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class RegisterResponse(BaseModel):
+    requires_verification: bool = True
+    email: str
+    message: str
+
+
+class UserVerify(BaseModel):
+    email: str
+    code: str
+
+
 # ── Room Schemas ──────────────────────────────────────────────────────────────
 
 class RoomCreate(BaseModel):
