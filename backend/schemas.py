@@ -42,6 +42,7 @@ class RegisterResponse(BaseModel):
     requires_verification: bool = True
     email: str
     message: str
+    code: Optional[str] = None
 
 
 class UserVerify(BaseModel):

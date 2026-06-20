@@ -584,6 +584,15 @@ async function handleLogin(e) {
   if (data.requires_verification) {
     $('#verify-email').value = data.email;
     $('#verify-code').value = '';
+    const debugEl = $('#verify-debug-code');
+    if (debugEl) {
+      if (data.code) {
+        debugEl.textContent = `Debug Mode: Your verification code is ${data.code}`;
+        debugEl.style.display = 'block';
+      } else {
+        debugEl.style.display = 'none';
+      }
+    }
     showAuthModal('verify');
     showToast(data.message || 'Verification required. Code sent to your email.', 'info');
     return;
@@ -624,6 +633,15 @@ async function handleRegister(e) {
   if (data.requires_verification) {
     $('#verify-email').value = data.email;
     $('#verify-code').value = '';
+    const debugEl = $('#verify-debug-code');
+    if (debugEl) {
+      if (data.code) {
+        debugEl.textContent = `Debug Mode: Your verification code is ${data.code}`;
+        debugEl.style.display = 'block';
+      } else {
+        debugEl.style.display = 'none';
+      }
+    }
     showAuthModal('verify');
     showToast(data.message || 'Verification code sent to your email', 'success');
     return;
@@ -1687,7 +1705,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#login-form')?.addEventListener('submit', handleLogin);
   $('#register-form')?.addEventListener('submit', handleRegister);
   $('#verify-form')?.addEventListener('submit', handleVerify);
-  $('#btn-verify-back-to-login')?.addEventListener('click', () => showAuthModal('login'));
+  $('#btn-verify-back-to-login')?.addEventListener('click', () => {
+    const debugEl = $('#verify-debug-code');
+    if (debugEl) { debugEl.style.display = 'none'; debugEl.textContent = ''; }
+    showAuthModal('login');
+  });
   $('#btn-resend-verification')?.addEventListener('click', () => {
     showToast('To request a new verification code, please go back to Log In and submit your credentials.', 'info');
   });

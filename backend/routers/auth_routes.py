@@ -64,10 +64,15 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     # Send / log verification code
     send_verification_email(user.email, code)
 
+    import os
+    smtp_host = os.getenv("SMTP_HOST")
+    expose_code = not bool(smtp_host)
+
     return RegisterResponse(
         requires_verification=True,
         email=user.email,
         message="Verification code sent to your email",
+        code=code if expose_code else None,
     )
 
 
@@ -99,13 +104,21 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
         # Resend code
         send_verification_email(user.email, code)
         
+        import os
+        smtp_host = os.getenv("SMTP_HOST")
+        expose_code = not bool(smtp_host)
+
+        detail_payload = {
+            "error": "verification_required",
+            "email": user.email,
+            "message": "Email not verified. A new verification code has been sent."
+        }
+        if expose_code:
+            detail_payload["code"] = code
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error": "verification_required",
-                "email": user.email,
-                "message": "Email not verified. A new verification code has been sent."
-            }
+            detail=detail_payload
         )
 
     token = create_access_token(user.id, user.username)
