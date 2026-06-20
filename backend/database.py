@@ -2,6 +2,8 @@
 Vynce Database — SQLAlchemy async engine and session setup.
 """
 
+import ssl
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -9,7 +11,10 @@ from . import config
 
 connect_args = {}
 if config.DATABASE_URL.startswith("postgresql"):
-    connect_args["ssl"] = "require"
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(
     config.DATABASE_URL,
