@@ -458,10 +458,6 @@ async function api(method, path, body, options = {}) {
       throw new Error('Server response was not valid JSON.');
     }
   } catch (e) {
-    if (e && e.status === 403 && e.detail && e.detail.error === 'verification_required') {
-      console.info('[API] Email verification required', e.detail);
-      return { requires_verification: true, email: e.detail.email, message: e.detail.message };
-    }
     // Stop all technical/network/parsing error notifications from coming to the user.
     // They are logged in console and hidden from the users. Only client input errors (4xx) are shown.
     if (e && e.isClientError) {
@@ -561,8 +557,6 @@ window.addEventListener('hashchange', handleRoute);
 function showAuthModal(tab = 'login') {
   const m = $('#auth-modal'); if (!m) return;
   m.style.display = 'flex';
-  const tabs = $('.auth-tabs');
-  if (tabs) tabs.style.display = tab === 'verify' ? 'none' : 'flex';
   $$('.auth-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
   $$('.auth-form-panel').forEach(f => f.classList.remove('active'));
   const btn = $(`[data-tab="${tab}"]`);
@@ -580,24 +574,6 @@ async function handleLogin(e) {
   if (!email || !password) { showToast('Fill in all fields', 'error'); return; }
   const data = await api.post('/api/auth/login', { email, password });
   if (!data) return;
-  
-  if (data.requires_verification) {
-    $('#verify-email').value = data.email;
-    $('#verify-code').value = '';
-    const debugEl = $('#verify-debug-code');
-    if (debugEl) {
-      if (data.code) {
-        debugEl.textContent = `Debug Mode: Your verification code is ${data.code}`;
-        debugEl.style.display = 'block';
-      } else {
-        debugEl.style.display = 'none';
-      }
-    }
-    showAuthModal('verify');
-    showToast(data.message || 'Verification required. Code sent to your email.', 'info');
-    return;
-  }
-  
   state.token = data.access_token; state.user = data.user;
   
   const remember = $('#login-remember')?.checked;
@@ -629,24 +605,6 @@ async function handleRegister(e) {
   if (password.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
   const data = await api.post('/api/auth/register', { username, email, password });
   if (!data) return;
-  
-  if (data.requires_verification) {
-    $('#verify-email').value = data.email;
-    $('#verify-code').value = '';
-    const debugEl = $('#verify-debug-code');
-    if (debugEl) {
-      if (data.code) {
-        debugEl.textContent = `Debug Mode: Your verification code is ${data.code}`;
-        debugEl.style.display = 'block';
-      } else {
-        debugEl.style.display = 'none';
-      }
-    }
-    showAuthModal('verify');
-    showToast(data.message || 'Verification code sent to your email', 'success');
-    return;
-  }
-  
   state.token = data.access_token; state.user = data.user;
   
   const remember = $('#register-remember')?.checked;
@@ -660,38 +618,6 @@ async function handleRegister(e) {
   
   hideAuthModal();
   showToast('Welcome to Vynce!', 'success');
-  const pendingRoom = sessionStorage.getItem('vynce_pending_room');
-  if (pendingRoom) {
-    sessionStorage.removeItem('vynce_pending_room');
-    navigateTo(`#/room/${pendingRoom}`);
-  } else {
-    navigateTo('#/dashboard');
-  }
-}
-
-async function handleVerify(e) {
-  e.preventDefault();
-  const email = $('#verify-email').value.trim();
-  const code = $('#verify-code').value.trim();
-  if (!email || !code) { showToast('Please enter the verification code', 'error'); return; }
-  if (code.length !== 6) { showToast('Verification code must be 6 digits', 'error'); return; }
-  
-  const data = await api.post('/api/auth/verify', { email, code });
-  if (!data) return;
-  
-  state.token = data.access_token; state.user = data.user;
-  
-  const remember = $('#login-remember')?.checked || $('#register-remember')?.checked;
-  if (remember) {
-    localStorage.setItem('vynce_token', data.access_token);
-    sessionStorage.removeItem('vynce_token');
-  } else {
-    sessionStorage.setItem('vynce_token', data.access_token);
-    localStorage.removeItem('vynce_token');
-  }
-  
-  hideAuthModal();
-  showToast(`Welcome back, ${state.user?.username || 'friend'}!`, 'success');
   const pendingRoom = sessionStorage.getItem('vynce_pending_room');
   if (pendingRoom) {
     sessionStorage.removeItem('vynce_pending_room');
@@ -1704,15 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-switch-to-login')?.addEventListener('click', () => showAuthModal('login'));
   $('#login-form')?.addEventListener('submit', handleLogin);
   $('#register-form')?.addEventListener('submit', handleRegister);
-  $('#verify-form')?.addEventListener('submit', handleVerify);
-  $('#btn-verify-back-to-login')?.addEventListener('click', () => {
-    const debugEl = $('#verify-debug-code');
-    if (debugEl) { debugEl.style.display = 'none'; debugEl.textContent = ''; }
-    showAuthModal('login');
-  });
-  $('#btn-resend-verification')?.addEventListener('click', () => {
-    showToast('To request a new verification code, please go back to Log In and submit your credentials.', 'info');
-  });
+
 
   // Landing
   $('#btn-nav-login')?.addEventListener('click', () => showAuthModal('login'));

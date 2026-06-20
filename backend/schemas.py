@@ -38,16 +38,7 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-class RegisterResponse(BaseModel):
-    requires_verification: bool = True
-    email: str
-    message: str
-    code: Optional[str] = None
-
-
-class UserVerify(BaseModel):
-    email: str
-    code: str
+# Email verification schemas removed
 
 
 # ── Room Schemas ──────────────────────────────────────────────────────────────
