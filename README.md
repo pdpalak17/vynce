@@ -1,3 +1,9 @@
+---
+title: Vynce
+sdk: docker
+app_port: 8000
+---
+
 # Vynce — Listen Together, Vibe Together
 
 Vynce is a premium, real-time synchronized music listening room application. Create virtual rooms, invite friends, chat in real-time, and listen to your favorite tracks synchronously — like a virtual collaborative DJ cabin. 
