@@ -4,6 +4,7 @@ Vynce Database — SQLAlchemy async engine and session setup.
 
 import ssl
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -37,13 +38,13 @@ async def init_db():
         # Execute ALTER TABLE queries for existing PostgreSQL tables to add new columns
         if engine.url.drivername.startswith("postgresql"):
             await conn.execute(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;")
             )
             await conn.execute(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(10);"
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(10);")
             )
             await conn.execute(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMP;"
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMP;")
             )
 
 
