@@ -138,6 +138,8 @@ def verify_email_existence(email: str) -> tuple[bool, str]:
                 return False, "The Gmail address does not exist."
         except Exception as e:
             logger.warning(f"SMTP check skipped or failed for {email}: {e}")
+            # Port 25 is blocked in many cloud environments, fallback to allowing it
+            return True, ""
             
     return True, ""
 
