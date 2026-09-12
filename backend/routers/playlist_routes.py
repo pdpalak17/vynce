@@ -1,5 +1,5 @@
 """
-Vynce Playlist Routes — CRUD for user playlists.
+Vynce Playlist Routes - CRUD for user playlists.
 """
 
 import json

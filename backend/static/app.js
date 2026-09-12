@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Vynce v2 — Main SPA Logic
+   Vynce v2 - Main SPA Logic
    Search · Play · Rooms · WebSocket Sync · Chat
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -368,7 +368,7 @@ function drawEQCurve() {
   eqCanvasCtx.lineWidth = 2;
   const gradient = eqCanvasCtx.createLinearGradient(0, 0, width, 0);
   gradient.addColorStop(0, '#00D4FF');
-  gradient.addColorStop(0.5, '#7B2FFF');
+  gradient.addColorStop(0.5, '#609EAF');
   gradient.addColorStop(1, '#FF2D78');
   eqCanvasCtx.strokeStyle = gradient;
 
@@ -712,7 +712,7 @@ function leaveRoom() {
 function renderRoomCards(rooms, sel) {
   const c = $(sel); if (!c) return;
   c.innerHTML = '';
-  if (!rooms.length) { c.innerHTML = '<p class="empty-hint">No rooms yet — create one!</p>'; return; }
+  if (!rooms.length) { c.innerHTML = '<p class="empty-hint">No rooms yet. Create one.</p>'; return; }
   rooms.forEach(r => {
     const card = document.createElement('div');
     card.className = 'room-card';
@@ -906,7 +906,7 @@ function loadTrack(track, startAt = 0, isRestore = false) {
 function togglePlay() {
   if(!audio.src) return;
   if(state.isPlaying) { audio.pause(); state.isPlaying = false; if(state.currentRoom) sendWS('pause'); }
-  else { audio.play().catch(e => showToast('Click play again — browser blocked autoplay', 'info')); state.isPlaying = true; if(state.currentRoom) sendWS('resume'); }
+  else { audio.play().catch(e => showToast('Click play again - browser blocked autoplay', 'info')); state.isPlaying = true; if(state.currentRoom) sendWS('resume'); }
   updatePlaybackUI();
 }
 
@@ -1133,7 +1133,7 @@ function setupAudioEvents(audioEl) {
   audioEl.addEventListener('error', () => {
     if (audioEl !== audio) return;
     if (!state.isPlaying || !audio.src || audio.src === window.location.href) return;
-    showToast('Playback error — skipping', 'error');
+    showToast('Playback error - skipping', 'error');
     playNext();
   });
 }
@@ -2524,7 +2524,7 @@ function renderExpandedQueue() {
   if (!state.queue.length) {
     const hint = document.createElement('p');
     hint.className = 'empty-hint';
-    hint.textContent = 'Queue is empty — search and add songs';
+    hint.textContent = 'Queue is empty. Search and add songs.';
     c.appendChild(hint);
     return;
   }
@@ -2995,3 +2995,6 @@ async function logHistoryToBackend(track) {
   });
 }
 
+
+
+('.btn-legal-back').forEach(btn => btn.addEventListener('click', () => { window.history.back(); }));

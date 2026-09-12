@@ -1,3 +1,3 @@
 """
-Vynce Routers — Package init.
+Vynce Routers - Package init.
 """

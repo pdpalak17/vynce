@@ -1,3 +1,3 @@
 """
-Vynce Services — Package init.
+Vynce Services - Package init.
 """

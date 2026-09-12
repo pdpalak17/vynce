@@ -1,5 +1,5 @@
 """
-Vynce — Main FastAPI Application Entry Point.
+Vynce - Main FastAPI Application Entry Point.
 
 A real-time synchronized music listening room app.
 """
@@ -144,7 +144,7 @@ async def serve_spa():
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
-    """SPA fallback — serve index.html for all non-API routes."""
+    """SPA fallback - serve index.html for all non-API routes."""
     file_path = STATIC_DIR / full_path
     if file_path.is_file():
         return FileResponse(str(file_path))

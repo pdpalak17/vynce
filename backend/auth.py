@@ -1,5 +1,5 @@
 """
-Vynce Auth — JWT token creation/verification and password hashing.
+Vynce Auth - JWT token creation/verification and password hashing.
 """
 
 from datetime import datetime, timedelta
@@ -65,7 +65,7 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """FastAPI dependency — extracts and validates the current user from JWT."""
+    """FastAPI dependency - extracts and validates the current user from JWT."""
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,5 +1,5 @@
 """
-Vynce Schemas — Pydantic models for request/response validation.
+Vynce Schemas - Pydantic models for request/response validation.
 """
 
 from datetime import datetime

@@ -1,5 +1,5 @@
 """
-Vynce Music Routes — Search, trending, albums, and song details.
+Vynce Music Routes - Search, trending, albums, and song details.
 Uses JioSaavn (primary) for Bollywood + Jamendo (secondary) for CC music.
 """
 
@@ -107,7 +107,7 @@ async def get_by_genre(
     limit: int = Query(20, ge=1, le=50),
     user: User = Depends(get_current_user),
 ):
-    """Get tracks by genre — searches JioSaavn with genre as query."""
+    """Get tracks by genre - searches JioSaavn with genre as query."""
     return await jiosaavn.search_tracks(f"{genre} songs", limit=limit)
 
 

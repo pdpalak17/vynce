@@ -1,3 +1,3 @@
 """
-Vynce — Package init.
+Vynce - Package init.
 """

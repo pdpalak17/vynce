@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Vynce — Listen to your favorite music and jam with friends in real-time synced rooms. Free forever." />
-  <title>Vynce — Listen Together</title>
+  <meta name="description" content="Vynce - Listen to your favorite music and jam with friends in real-time synced rooms. Free forever." />
+  <title>Vynce | Listen Together</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/styles.css?v=3.2" />
-  <link rel="icon" href="/static/logo.png?v=2" type="image/png" />
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
 </head>
 <body>
 
@@ -24,15 +24,10 @@
 
   <!-- ═══════════ 1. LANDING PAGE ═══════════ -->
   <div id="landing-page" class="page landing-page">
-    <div class="orb-container">
-      <div class="orb orb--1"></div>
-      <div class="orb orb--2"></div>
-      <div class="orb orb--3"></div>
-    </div>
 
     <nav class="landing-nav">
       <div class="landing-nav__logo">
-        <img src="/static/logo.png?v=2" alt="Vynce Logo" class="brand-logo-img" />
+        <img src="/static/favicon.svg" alt="Vynce Logo" class="brand-logo-img" />
       </div>
       <div class="landing-nav__actions">
         <button id="btn-nav-join-room" class="btn btn-ghost">Join with Code</button>
@@ -43,12 +38,11 @@
 
     <section class="landing-hero">
       <p class="landing-hero__tagline">Free High-Fidelity Music Streaming</p>
-      <h1 class="landing-hero__title">Listen Together,<br/><span>Vibe Together</span></h1>
-      <p class="landing-hero__subtitle">Stream millions of tracks, create listening rooms, and jam with friends in perfect real-time sync. All free.</p>
+      <h1 class="landing-hero__title">Your music.<br/><span>Your room. Your friends.</span></h1>
+      <p class="landing-hero__subtitle">Create a room, share the code, and everyone hears the same song at the same time. Synced playback, live chat, and a shared queue.</p>
       <div class="landing-hero__actions">
         <button id="btn-hero-create-room" class="btn btn-primary btn-lg">Create a Room</button>
         <button id="btn-hero-join-room" class="btn btn-ghost btn-lg" style="border: 1px solid var(--border-hover);">Join with Code</button>
-        <button id="btn-hero-explore" class="btn btn-ghost btn-lg">Explore Music →</button>
       </div>
     </section>
 
@@ -56,8 +50,8 @@
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-          <h3>Over 80M+ Songs</h3>
-          <p>Latest hits, classics, pop, rock, indie — everything from a massive global music catalog.</p>
+          <h3>Search any song</h3>
+          <p>Find tracks across a global catalog. Search by song name, artist, or album.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
@@ -67,13 +61,13 @@
         <div class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
           <h3>Live Chat</h3>
-          <p>Discuss tracks, share vibes, react in real-time while the music plays.</p>
+          <p>Talk while you listen. Send messages in real time without leaving the room.</p>
         </div>
       </div>
     </section>
 
     <footer class="landing-footer">
-      <p>© 2026 Vynce. Music powered by JioSaavn.</p>
+      <p>© 2026 Vynce. Music powered by JioSaavn. | <a href="#/privacy" class="footer-link">Privacy Policy</a> | <a href="#/terms" class="footer-link">Terms & Conditions</a></p>
     </footer>
   </div>
 
@@ -346,7 +340,7 @@
                 </button>
                 <button class="btn btn-ghost btn-like-mix">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                  <span id="hero-banner-likes-count">32k Likes</span>
+                  <span id="hero-banner-likes-count">Like Mix</span>
                 </button>
               </div>
             </div>
@@ -441,7 +435,7 @@
         <section class="dash-section">
           <h2 class="section-title">Public Rooms</h2>
           <div id="public-rooms-grid" class="rooms-grid">
-            <p class="empty-hint">No rooms yet — create one to get started!</p>
+            <p class="empty-hint">No rooms yet. Create one to get started.</p>
           </div>
         </section>
       </div>
@@ -523,7 +517,7 @@
             <span class="col-actions">Actions</span>
           </div>
           <div id="queue-list" class="queue-list">
-            <p class="empty-hint">Queue is empty — search and add songs</p>
+            <p class="empty-hint">Queue is empty. Search and add songs.</p>
           </div>
         </div>
       </div>
@@ -599,6 +593,50 @@
         </section>
       </div>
     </main>
+  </div>
+
+  <!-- ═══════════ 9. PRIVACY POLICY PAGE ═══════════ -->
+  <div id="privacy-page" class="page" style="display:none; padding: 40px; overflow-y: auto;">
+    <header class="dash-header" style="position: sticky; top: 0; margin-bottom: 30px;">
+      <button class="btn btn-ghost btn-sm btn-legal-back">← Back</button>
+      <h2 class="section-title" style="margin: 0;">Privacy Policy</h2>
+      <div></div>
+    </header>
+    <div style="max-width: 800px; margin: 0 auto; line-height: 1.8;">
+      <h3>1. Information We Collect</h3>
+      <p>We collect information you provide directly to us when you register, such as your username and email address. We also collect usage data including listening history, created playlists, and room interactions.</p>
+      <br/>
+      <h3>2. How We Use Your Information</h3>
+      <p>We use the information we collect to provide, maintain, and improve our services, including personalized recommendations, syncing playback in rooms, and processing search requests.</p>
+      <br/>
+      <h3>3. Third-Party Services</h3>
+      <p>Our music search and metadata rely on third-party APIs (e.g., JioSaavn). Your search queries and playback requests may be routed through these services. We do not sell your data.</p>
+      <br/>
+      <h3>4. Contact Us</h3>
+      <p>If you have any questions about this Privacy Policy, please contact us.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ 10. TERMS & CONDITIONS PAGE ═══════════ -->
+  <div id="terms-page" class="page" style="display:none; padding: 40px; overflow-y: auto;">
+    <header class="dash-header" style="position: sticky; top: 0; margin-bottom: 30px;">
+      <button class="btn btn-ghost btn-sm btn-legal-back">← Back</button>
+      <h2 class="section-title" style="margin: 0;">Terms & Conditions</h2>
+      <div></div>
+    </header>
+    <div style="max-width: 800px; margin: 0 auto; line-height: 1.8;">
+      <h3>1. Acceptance of Terms</h3>
+      <p>By accessing and using Vynce, you agree to be bound by these Terms & Conditions.</p>
+      <br/>
+      <h3>2. Description of Service</h3>
+      <p>Vynce provides a platform for synchronized music listening and chat. The service is provided "as is" and we reserve the right to modify or discontinue features at any time.</p>
+      <br/>
+      <h3>3. User Conduct</h3>
+      <p>You agree not to use the service for any unlawful purpose or to harass, abuse, or harm others in public or private rooms.</p>
+      <br/>
+      <h3>4. Intellectual Property</h3>
+      <p>All music content is streamed via third-party providers. We do not host or claim ownership of any copyrighted audio tracks.</p>
+    </div>
   </div>
 
     </div>

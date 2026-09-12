@@ -1,5 +1,5 @@
 """
-Vynce Database — SQLAlchemy async engine and session setup.
+Vynce Database - SQLAlchemy async engine and session setup.
 """
 
 import ssl
@@ -49,7 +49,7 @@ async def init_db():
 
 
 async def get_db():
-    """FastAPI dependency — yields an async DB session."""
+    """FastAPI dependency - yields an async DB session."""
     async with async_session() as session:
         try:
             yield session

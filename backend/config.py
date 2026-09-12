@@ -1,5 +1,5 @@
 """
-Vynce Configuration — Environment variables and app settings.
+Vynce Configuration - Environment variables and app settings.
 """
 
 import os
