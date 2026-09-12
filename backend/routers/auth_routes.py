@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     """Create a new user account."""
     # Verify email exists and is valid (blocks fake emails)
-    is_valid, err_msg = verify_email_existence(payload.email)
+    is_valid, err_msg = await verify_email_existence(payload.email)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -46,3 +46,6 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 # Server
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
+
+# AbstractAPI Email Validation
+EMAIL_VERIFICATION_API_KEY = os.getenv("EMAIL_VERIFICATION_API_KEY", "")

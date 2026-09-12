@@ -4,6 +4,7 @@ Vynce Auth - JWT token creation/verification and password hashing.
 
 from datetime import datetime, timedelta
 import logging
+import httpx
 import smtplib
 from typing import Optional
 
@@ -111,10 +112,10 @@ async def get_optional_user(
         return None
 
 
-def verify_email_existence(email: str) -> tuple[bool, str]:
+async def verify_email_existence(email: str) -> tuple[bool, str]:
     """
     Validates syntax and domain deliverability for all emails.
-    If the email is a Gmail address, also verifies mailbox existence via SMTP.
+    Uses AbstractAPI for deep validation if EMAIL_VERIFICATION_API_KEY is provided.
     Returns (is_valid, error_message).
     """
     email = email.strip()
@@ -124,22 +125,26 @@ def verify_email_existence(email: str) -> tuple[bool, str]:
     except EmailNotValidError as e:
         return False, f"Email domain validation failed: {str(e)}"
     
-    parts = email.split("@")
-    if len(parts) == 2 and parts[1].lower() == "gmail.com":
-        mx_server = "gmail-smtp-in.l.google.com"
+    if config.EMAIL_VERIFICATION_API_KEY:
         try:
-            server = smtplib.SMTP(mx_server, 25, timeout=5)
-            server.ehlo("gmail.com")
-            server.mail("test@gmail.com")
-            code, message = server.rcpt(email)
-            server.quit()
-            
-            if code == 550:
-                return False, "The Gmail address does not exist."
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://emailvalidation.abstractapi.com/v1/",
+                    params={"api_key": config.EMAIL_VERIFICATION_API_KEY, "email": email},
+                    timeout=10.0
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("deliverability") == "UNDELIVERABLE":
+                        return False, "This email address does not exist."
+                    if data.get("is_disposable_email", {}).get("value") is True:
+                        return False, "Disposable emails are not allowed."
+                else:
+                    logger.error(f"Email validation API error: {resp.status_code}")
         except Exception as e:
-            logger.warning(f"SMTP check skipped or failed for {email}: {e}")
-            # Port 25 is blocked in many cloud environments, fallback to allowing it
-            return True, ""
+            logger.error(f"Failed to reach email validation API: {e}")
+    else:
+        logger.warning("EMAIL_VERIFICATION_API_KEY is not set. Deep verification skipped.")
             
     return True, ""
 
