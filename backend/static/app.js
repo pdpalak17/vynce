@@ -511,7 +511,7 @@ function handleRoute() {
   // Manage app layout visibility
   const appLayout = $('#app-layout');
   if (appLayout) {
-    if (state.token && route !== '') {
+    if (state.token && route !== '' && route !== 'privacy' && route !== 'terms') {
       appLayout.style.display = 'flex';
     } else {
       appLayout.style.display = 'none';
