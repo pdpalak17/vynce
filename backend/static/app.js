@@ -870,22 +870,7 @@ function loadTrack(track, startAt = 0, isRestore = false) {
     });
   }
   try { audio.src = track.stream_url; audio.currentTime = startAt; } catch(e) { showToast('Could not load track', 'error'); return; }
-  const t = $('#player-track-title'); if(t) t.textContent = track.title || 'Unknown';
-  const a = $('#player-track-artist'); if(a) a.textContent = track.artist || 'Unknown';
-  const d = $('#time-total'); if(d) d.textContent = formatTime(track.duration);
-  const img = $('#player-album-art');
-  const placeholder = $('#player-placeholder-icon');
-  if(img) {
-    if (track.album_art) {
-      img.src = track.album_art;
-      img.alt = track.title || '';
-      img.style.display = 'block';
-      if (placeholder) placeholder.style.display = 'none';
-    } else {
-      img.style.display = 'none';
-      if (placeholder) placeholder.style.display = 'block';
-    }
-  }
+  updateGlobalPlayerUI();
   const bar = $('#progress-fill'); if(bar) bar.style.width = '0%';
   const cur = $('#time-current'); if(cur) cur.textContent = '0:00';
 
@@ -1037,6 +1022,7 @@ async function startCrossfade() {
       renderQueue();
       renderExpandedQueue();
       updateExpandedPlayerUI();
+      updateGlobalPlayerUI();
       logHistoryToBackend(nextTrack);
       
       isCrossfading = false;
@@ -2183,9 +2169,31 @@ function collapsePlayer() {
   if (ep) ep.style.display = 'none';
 }
 
+
+function updateGlobalPlayerUI() {
+  const track = state.currentTrack;
+  if (!track) return;
+  const t = #player-track-title; if(t) t.textContent = track.title || 'Unknown';
+  const a = #player-track-artist; if(a) a.textContent = track.artist || 'Unknown';
+  const d = #time-total; if(d) d.textContent = formatTime(track.duration || audio.duration);
+  const img = #player-album-art;
+  const placeholder = #player-placeholder-icon;
+  if(img) {
+    if (track.album_art) {
+      img.src = track.album_art;
+      img.alt = track.title || '';
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
+  }
+}
+
 function updateExpandedPlayerUI() {
   const ep = $('#expanded-player');
-  if (!ep || ep.style.display === 'none') return;
+  if (!ep) return;
   
   const track = state.currentTrack;
   if (!track) {
