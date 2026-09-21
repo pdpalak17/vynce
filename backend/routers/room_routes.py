@@ -10,7 +10,8 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..models import Room, User
 from ..schemas import RoomCreate, RoomResponse
-from ..services.room_manager import room_manager
+import json
+from ..models import RoomLiveState
 
 router = APIRouter(prefix="/api/rooms", tags=["rooms"])
 
@@ -30,9 +31,6 @@ async def create_room(
     db.add(room)
     await db.commit()
     await db.refresh(room)
-
-    # Pre-create in room manager
-    room_manager.get_or_create_room(room.code, room.name, user.id)
 
     resp = RoomResponse.model_validate(room)
     resp.creator_username = user.username
@@ -57,11 +55,13 @@ async def list_rooms(
     for room in rooms:
         r = RoomResponse.model_validate(room)
         r.creator_username = room.creator.username if room.creator else None
-        # Add live info from room manager
-        live = room_manager.get_room_info(room.code)
-        if live:
-            r.listener_count = live["listener_count"]
-            r.current_track = live["current_track"]
+        
+        state_result = await db.execute(select(RoomLiveState).where(RoomLiveState.room_code == room.code))
+        live_state = state_result.scalar_one_or_none()
+        if live_state and live_state.current_track:
+            r.current_track = json.loads(live_state.current_track)
+        r.listener_count = 0
+        
         response.append(r)
 
     return response
@@ -86,10 +86,13 @@ async def get_room(
 
     r = RoomResponse.model_validate(room)
     r.creator_username = room.creator.username if room.creator else None
-    live = room_manager.get_room_info(room.code)
-    if live:
-        r.listener_count = live["listener_count"]
-        r.current_track = live["current_track"]
+    
+    state_result = await db.execute(select(RoomLiveState).where(RoomLiveState.room_code == room.code))
+    live_state = state_result.scalar_one_or_none()
+    if live_state and live_state.current_track:
+        r.current_track = json.loads(live_state.current_track)
+    r.listener_count = 0
+    
     return r
 
 

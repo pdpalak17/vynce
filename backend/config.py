@@ -15,15 +15,15 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Database
 _db_url = os.getenv("DATABASE_URL")
-if _db_url:
-    if _db_url.startswith("postgresql://"):
-        DATABASE_URL = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif _db_url.startswith("postgres://"):
-        DATABASE_URL = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    else:
-        DATABASE_URL = _db_url
+if not _db_url:
+    raise ValueError("DATABASE_URL environment variable is required.")
+
+if _db_url.startswith("postgresql://"):
+    DATABASE_URL = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif _db_url.startswith("postgres://"):
+    DATABASE_URL = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 else:
-    DATABASE_URL = f"sqlite+aiosqlite:///{BASE_DIR / 'vynce.db'}"
+    DATABASE_URL = _db_url
 
 # JWT Authentication
 JWT_SECRET = os.getenv("JWT_SECRET", "vynce-dev-secret-change-in-production-2026")

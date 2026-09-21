@@ -7,6 +7,7 @@ import ssl
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from . import config
 
@@ -20,8 +21,7 @@ if config.DATABASE_URL.startswith("postgresql"):
 engine = create_async_engine(
     config.DATABASE_URL,
     echo=False,
-    pool_pre_ping=True,
-    pool_recycle=300,
+    poolclass=NullPool,
     connect_args=connect_args,
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

@@ -745,89 +745,123 @@ function renderRoomCards(rooms, sel) {
   });
 }
 
-/* ═══════ WEBSOCKET ═══════ */
-let wsRetries = 0, wsHeartbeat = null;
+/* ═══════ HTTP POLLING (Replaces WebSocket) ═══════ */
+let pollInterval = null;
 
-function connectToRoom(code) {
-  if (state.ws?.readyState <= WebSocket.OPEN) state.ws.close();
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws/${code}?token=${encodeURIComponent(state.token)}`);
-  ws.onopen = () => {
-    setTimeout(() => {
-      if (state.ws === ws && ws.readyState === WebSocket.OPEN) {
-        wsRetries = 0;
-      }
-    }, 5000);
-    startHeartbeat();
-  };
-  ws.onmessage = e => { try { handleWSMessage(JSON.parse(e.data)); } catch(err) { console.error('[WS]', err); } };
-  ws.onclose = () => { stopHeartbeat(); if (state.currentRoom?.code === code) attemptReconnect(code); };
-  ws.onerror = err => console.error('[WS] Error', err);
-  state.ws = ws;
+async function connectToRoom(code) {
+  if (pollInterval) clearInterval(pollInterval);
+  state.ws = { readyState: 1 }; // Fake open state for existing logic checks
+  
+  // Initial fetch
+  await pollRoomState(code);
+  
+  // Start polling every 2.5s
+  pollInterval = setInterval(() => pollRoomState(code), 2500);
 }
 
-function handleWSMessage(msg) {
-  const d = msg.data || msg;
-  switch(msg.type) {
-    case 'room_state':
-      if (d.current_track) {
-        const now = Date.now();
-        const serverTimeMs = (d.server_time || 0) * 1000;
-        const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+async function pollRoomState(code) {
+  if (!state.currentRoom || state.currentRoom.code !== code) return;
+  try {
+    const data = await api.get(`/api/rooms/${code}/state`);
+    if (data) handlePollUpdate(data);
+  } catch (err) {
+    console.error('[Poll Error]', err);
+  }
+}
+
+function handlePollUpdate(d) {
+  if (d.current_track) {
+    const now = Date.now();
+    const serverTimeMs = (d.server_time || 0) * 1000;
+    const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
+    
+    // If track changed or audio is not loaded
+    if (!state.currentTrack || state.currentTrack.id !== d.current_track.id) {
         loadTrack(d.current_track, (d.position || 0) + latency);
+        if (d.is_playing) {
+            audio.play().catch(()=>{});
+            state.isPlaying = true;
+        }
+    } else if (d.is_playing) {
+        // Track same, check position drift
+        const adjusted = d.position + latency;
+        if(Math.abs(audio.currentTime - adjusted) > 1.5) {
+            audio.currentTime = adjusted;
+        }
+        if (!state.isPlaying) {
+            audio.play().catch(()=>{});
+            state.isPlaying = true;
+        }
+    } else {
+        if (state.isPlaying) {
+            audio.pause();
+            state.isPlaying = false;
+        }
+    }
+  } else {
+    // No track playing
+    if (state.currentTrack) {
+        audio.pause();
+        state.isPlaying = false;
+        state.currentTrack = null;
+    }
+  }
+  
+  if (d.queue) { state.queue = d.queue; renderQueue(); renderExpandedQueue(); }
+  
+  // Not passing users because serverless doesn't easily track presence without heartbeats
+  // if (d.users) renderListeners(d.users);
+  updatePlaybackUI();
+  
+  // Handle chat (naive replacement for demo)
+  if (d.chat_history) {
+      const chatContainer = $('#chat-messages');
+      if (chatContainer && state._lastChatCount !== d.chat_history.length) {
+          chatContainer.innerHTML = '';
+          d.chat_history.forEach(appendChatMessage);
+          state._lastChatCount = d.chat_history.length;
       }
-      if (d.is_playing) { audio.play().catch(()=>{}); state.isPlaying = true; }
-      if (d.queue) { state.queue = d.queue; renderQueue(); renderExpandedQueue(); }
-      if (d.users) renderListeners(d.users);
-      updatePlaybackUI(); break;
-    case 'user_joined': handleUserJoined(d.username, d.listener_count); break;
-    case 'user_left': handleUserLeft(d.username, d.listener_count); break;
-    case 'play_track': {
-      const now = Date.now();
-      const serverTimeMs = (d.server_time || 0) * 1000;
-      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
-      loadTrack(d.track, latency);
-      audio.play().catch(()=>{});
-      state.isPlaying = true;
-      updatePlaybackUI(); break;
-    }
-    case 'sync': handleSync(d); break;
-    case 'pause': audio.pause(); state.isPlaying = false; updatePlaybackUI(); break;
-    case 'resume': {
-      const now = Date.now();
-      const serverTimeMs = (d.server_time || 0) * 1000;
-      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
-      audio.currentTime = d.position + latency;
-      audio.play().catch(()=>{});
-      state.isPlaying = true;
-      updatePlaybackUI(); break;
-    }
-    case 'seek': {
-      const now = Date.now();
-      const serverTimeMs = (d.server_time || 0) * 1000;
-      const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
-      audio.currentTime = d.position + latency; break;
-    }
-    case 'queue_update': state.queue = d.queue || []; renderQueue(); renderExpandedQueue(); break;
-    case 'chat_message': appendChatMessage(d); break;
-    case 'error': showToast(d.message || 'Error', 'error'); break;
-    case 'pong': break;
   }
 }
-function handleSync(d) {
-  if(!audio.src || !state.currentTrack) return;
-  const now = Date.now();
-  const serverTimeMs = (d.server_time || 0) * 1000;
-  const latency = serverTimeMs > 0 ? Math.max(0, Math.min(2000, now - serverTimeMs)) / 1000 : 0;
-  const adjusted = d.position + latency;
-  if(Math.abs(audio.currentTime - adjusted) > 0.5) {
-    audio.currentTime = adjusted;
+
+async function sendAction(action, data = {}) {
+  if (!state.currentRoom) return;
+  const code = state.currentRoom.code;
+  try {
+      await api.post(`/api/rooms/${code}/${action}`, data);
+      pollRoomState(code); // Instantly update
+  } catch (e) {
+      console.error(`Action failed: ${action}`, e);
   }
 }
-function sendWS(type, data = {}) { if(state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({type, data})); }
-function startHeartbeat() { stopHeartbeat(); wsHeartbeat = setInterval(() => { if(state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({type:'ping'})); }, 30000); }
-function stopHeartbeat() { if(wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; } }
-function attemptReconnect(code) { if(wsRetries >= 5) { showToast('Lost connection', 'error'); return; } const delay = Math.min(1000*2**wsRetries,16000); wsRetries++; setTimeout(() => connectToRoom(code), delay); }
+
+function sendWS(type, data = {}) { 
+    // Mapper from WS events to HTTP actions
+    const mapping = {
+        'play_track': 'play',
+        'pause': 'pause',
+        'resume': 'resume',
+        'seek': 'seek',
+        'queue_update': 'queue',
+        'queue_track': 'queue',
+        'skip': 'skip',
+        'prev_track': 'prev',
+        'remove_from_queue': 'remove-queue',
+        'chat_message': 'chat',
+        'vote_track': 'vote'
+    };
+    const action = mapping[type];
+    if (action) {
+        if (type === 'queue_update' && data.queue && data.queue.length > 0) {
+            sendAction('queue', { track: data.queue[data.queue.length - 1] });
+        } else {
+            sendAction(action, data);
+        }
+    }
+}
+function startHeartbeat() { }
+function stopHeartbeat() { if(pollInterval) clearInterval(pollInterval); }
+function attemptReconnect(code) { }
 function updateLC(c) { const el = $('#listener-count-display'); if(el && c!=null) el.textContent = c; }
 
 /* ═══════ AUDIO PLAYER ═══════ */

@@ -5,7 +5,7 @@ Vynce Models - SQLAlchemy ORM models for User, Room, Playlist, RoomHistory.
 import datetime
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -132,3 +132,16 @@ class DailyMix(Base):
     generated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+class RoomLiveState(Base):
+    __tablename__ = "room_live_states"
+
+    room_code = Column(String(6), primary_key=True)
+    current_track = Column(Text, nullable=True)  # JSON string
+    is_playing = Column(Boolean, default=False)
+    playback_position = Column(Float, default=0.0)
+    playback_started_at = Column(Float, default=0.0)
+    queue = Column(Text, default="[]")  # JSON string
+    chat_history = Column(Text, default="[]")  # JSON string
+    history = Column(Text, default="[]")  # JSON string
+    removed_track_ids = Column(Text, default="[]")  # JSON string
+    last_updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
