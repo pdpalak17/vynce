@@ -31,8 +31,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     logger.info(f"🎵 Starting {config.APP_NAME} v{config.APP_VERSION}")
-    await init_db()
-    logger.info("✅ Database initialized")
+    try:
+        await init_db()
+        logger.info("✅ Database initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize database: {e}")
     yield
     # Shutdown
     await jamendo.close()
