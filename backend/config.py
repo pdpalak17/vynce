@@ -29,7 +29,8 @@ else:
 # JWT Authentication
 JWT_SECRET = os.getenv("JWT_SECRET", "vynce-dev-secret-change-in-production-2026")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "72"))
+_jwt_expiry = os.getenv("JWT_EXPIRY_HOURS", "72")
+JWT_EXPIRY_HOURS = int(_jwt_expiry) if _jwt_expiry else 72
 
 # Jamendo API
 JAMENDO_CLIENT_ID = os.getenv("JAMENDO_CLIENT_ID", "")
@@ -41,12 +42,14 @@ DEEZER_BASE_URL = "https://api.deezer.com"
 # App Settings
 APP_NAME = "Vynce"
 APP_VERSION = "1.0.0"
-MAX_ROOM_SIZE = int(os.getenv("MAX_ROOM_SIZE", "20"))
+_max_room_size = os.getenv("MAX_ROOM_SIZE", "20")
+MAX_ROOM_SIZE = int(_max_room_size) if _max_room_size else 20
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 # Server
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8000"))
+_port = os.getenv("PORT", "8000")
+PORT = int(_port) if _port else 8000
 
 # AbstractAPI Email Validation
 EMAIL_VERIFICATION_API_KEY = os.getenv("EMAIL_VERIFICATION_API_KEY", "")
