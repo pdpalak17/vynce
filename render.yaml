@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: vynce-web
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vynce-db
+          property: connectionString
+
+databases:
+  - name: vynce-db
+    plan: free
+    databaseName: vynce
+    user: vynce_user
