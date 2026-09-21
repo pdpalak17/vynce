@@ -2212,11 +2212,11 @@ function collapsePlayer() {
 function updateGlobalPlayerUI() {
   const track = state.currentTrack;
   if (!track) return;
-  const t = #player-track-title; if(t) t.textContent = track.title || 'Unknown';
-  const a = #player-track-artist; if(a) a.textContent = track.artist || 'Unknown';
-  const d = #time-total; if(d) d.textContent = formatTime(track.duration || audio.duration);
-  const img = #player-album-art;
-  const placeholder = #player-placeholder-icon;
+  const t = $('#player-track-title'); if(t) t.textContent = track.title || 'Unknown';
+  const a = $('#player-track-artist'); if(a) a.textContent = track.artist || 'Unknown';
+  const d = $('#time-total'); if(d) d.textContent = formatTime(track.duration || audio.duration);
+  const img = $('#player-album-art');
+  const placeholder = $('#player-placeholder-icon');
   if(img) {
     if (track.album_art) {
       img.src = track.album_art;
