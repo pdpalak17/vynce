@@ -2027,8 +2027,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Boot
   const savedToken = localStorage.getItem('vynce_token') || sessionStorage.getItem('vynce_token');
-  if(savedToken) { state.token = savedToken; loadCurrentUser().then(handleRoute); }
-  else handleRoute();
+  if(savedToken) { 
+    state.token = savedToken; 
+    handleRoute(); 
+    loadCurrentUser(); 
+  } else {
+    handleRoute();
+  }
 
   // Restore last played track if user leaves and returns
   try {
