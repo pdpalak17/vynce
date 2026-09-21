@@ -16,9 +16,10 @@ BASE_DIR = Path(__file__).resolve().parent
 # Database
 _db_url = os.getenv("DATABASE_URL")
 if not _db_url:
-    raise ValueError("DATABASE_URL environment variable is required.")
-
-if _db_url.startswith("postgresql://"):
+    # Fallback to local SQLite if environment variable is missing so Vercel doesn't crash on boot
+    DATABASE_URL = "sqlite+aiosqlite:///backend/vynce.db"
+    print("WARNING: DATABASE_URL not found. Falling back to SQLite.")
+elif _db_url.startswith("postgresql://"):
     DATABASE_URL = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif _db_url.startswith("postgres://"):
     DATABASE_URL = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
