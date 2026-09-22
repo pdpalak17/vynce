@@ -411,7 +411,7 @@ async function api(method, path, body, options = {}) {
   if (body && method !== 'GET') opts.body = JSON.stringify(body);
   try {
     const res = await fetch(path, opts);
-    if (res.status === 401) { logout(); showToast('Session expired', 'error'); return null; }
+    if (res.status === 401 && state.token) { logout(); showToast('Session expired', 'error'); return null; }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       let detail = res.statusText;
