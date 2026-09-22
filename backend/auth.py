@@ -114,13 +114,13 @@ async def get_optional_user(
 
 async def verify_email_existence(email: str) -> tuple[bool, str]:
     """
-    Validates email syntax for all signups.
-    Uses AbstractAPI for deep deliverability validation if configured.
+    Validates syntax and domain deliverability for all emails.
+    Uses AbstractAPI for deep validation if EMAIL_VERIFICATION_API_KEY is provided.
     Returns (is_valid, error_message).
     """
     email = email.strip()
     try:
-        valid = validate_email(email, check_deliverability=False)
+        valid = validate_email(email, check_deliverability=True)
         email = valid.normalized
     except EmailNotValidError as e:
         return False, f"Email domain validation failed: {str(e)}"
