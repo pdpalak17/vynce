@@ -3,7 +3,7 @@ Vynce Auth Routes - Register, Login, Profile endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import create_access_token, get_current_user, hash_password, verify_password, verify_email_existence
@@ -17,11 +17,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     """Create a new user account."""
-    username = payload.username.strip()
-    email = str(payload.email).strip().lower()
-
     # Verify email exists and is valid (blocks fake emails)
-    is_valid, err_msg = await verify_email_existence(email)
+    is_valid, err_msg = await verify_email_existence(payload.email)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -29,7 +26,7 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
         )
 
     # Check if email already exists
-    result = await db.execute(select(User).where(func.lower(User.email) == email))
+    result = await db.execute(select(User).where(User.email == payload.email))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -37,7 +34,7 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
         )
 
     # Check if username already exists
-    result = await db.execute(select(User).where(func.lower(User.username) == username.lower()))
+    result = await db.execute(select(User).where(User.username == payload.username))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -46,8 +43,8 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
 
     # Create user (verified by default)
     user = User(
-        username=username,
-        email=email,
+        username=payload.username,
+        email=payload.email,
         hashed_password=hash_password(payload.password),
         is_verified=True,
     )
@@ -67,13 +64,10 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     """Log in with email and password."""
-    identifier = payload.email.strip().lower()
-
     # Search for user by email OR username
     result = await db.execute(
         select(User).where(
-            (func.lower(User.email) == identifier)
-            | (func.lower(User.username) == identifier)
+            (User.email == payload.email) | (User.username == payload.email)
         )
     )
     user = result.scalar_one_or_none()
